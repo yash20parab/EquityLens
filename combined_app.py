@@ -595,16 +595,40 @@ if selected == "Portfolio Analysis":
 
     # Function to calculate portfolio metrics
     def calculate_metrics(Returns, weights):
+        # Validate inputs
+        if len(Returns) == 0 or len(weights) == 0:
+            raise ValueError("Returns and weights cannot be empty")
+        if len(weights) != len(Returns):
+            raise ValueError("Number of weights must match number of returns")
+            
         annual_returns = []
         for i, df in enumerate(Returns):
+            if df.empty or 'Adj Close' not in df.columns:
+                raise ValueError(f"Invalid data for return {i}")
             initial = df['Adj Close'].iloc[0]
             last = df['Adj Close'].iloc[-1]
             annual_returns.append((last / initial - 1))
         
-        portfolio_return = sum(np.array(annual_returns) * np.array(weights))
-        portfolio_std_dev = np.sqrt(np.dot(weights, np.dot(np.cov([df['DailyReturn'].dropna() for df in Returns]), weights)))
+        # Convert to numpy arrays and ensure proper shapes
+        annual_returns = np.array(annual_returns)
+        weights = np.array(weights)
         
-        return annual_returns, portfolio_return, portfolio_std_dev
+        # Calculate portfolio return
+        portfolio_return = np.dot(annual_returns, weights)
+        
+        # Calculate portfolio standard deviation
+        daily_returns = [df['DailyReturn'].dropna() for df in Returns]
+        if len(daily_returns) == 0:
+            portfolio_std_dev = 0.0
+        else:
+            # Ensure all daily returns have same length
+            min_length = min(len(dr) for dr in daily_returns)
+            daily_returns = [dr[:min_length] for dr in daily_returns]
+            cov_matrix = np.cov(daily_returns)
+            portfolio_std_dev = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+        
+        return annual_returns.tolist(), portfolio_return, portfolio_std_dev
+
 
     # Definitions of financial metrics
     # Beta: A measure of a stock's volatility in relation to the market.
