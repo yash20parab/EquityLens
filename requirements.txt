@@ -1,0 +1,11 @@
+streamlit==1.32.0
+yfinance==0.2.36
+requests==2.31.0
+pandas==2.2.0
+numpy==1.26.0
+plotly==5.18.0
+statsmodels==0.14.1
+matplotlib==3.8.0
+google-generativeai==0.3.2
+Pillow==10.1.0
+streamlit-option-menu==0.3.12
