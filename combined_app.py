@@ -4,6 +4,7 @@ import requests
 from requests.exceptions import RequestException
 import time
 import pandas as pd
+import feedparser
 import numpy as np
 import plotly.graph_objects as go
 from datetime import date, timedelta
@@ -23,7 +24,7 @@ st.title("EquityLens")
 
 selected = option_menu(
     menu_title=None,
-    options=["Home","Market Status","Portfolio Analysis"],
+    options=["Home","Market Status","Portfolio Analysis and News"],
     default_index=0,
     orientation="horizontal",
 
@@ -574,194 +575,161 @@ if selected == "Market Status":
         main()
 
 
-if selected == "Portfolio Analysis":
-    # Portfolio Analysis Page Content
-    
-    # Configure Google Gemini API
-    genai.configure(api_key="AIzaSyDrPnsBMj74vzUKb-jTG0jJSIi8Xk7pqWE")  # Set your Google Gemini API key here
-    model = genai.GenerativeModel("gemini-1.5-flash")
+if selected == "Portfolio Analysis and News":
+    def create_navigation():
+        return option_menu(
+            menu_title=None,
+            options=["Portfolio Analysis","News"],
+            default_index=0,
+            orientation="horizontal",
+            styles={
+                "container": {"padding": "0!important", "background-color": "#1e1e1e"},
+                "icon": {"color": "white", "font-size": "14px"}, 
+                "nav-link": {"font-size": "14px", "text-align": "left", "margin":"0px", "--hover-color": "#333333"},
+                "nav-link-selected": {"background-color": "#333333"},
+            }
+        )
 
-    # Set the style for matplotlib
-    plt.style.use('dark_background')
+    def create_sidebar():
+        st.sidebar.header("Portfolio Configuration", divider="gray")
+        tickers = st.sidebar.text_input("Enter Indian stock tickers (comma separated, add .NS suffix)", "RELIANCE.NS,TCS.NS,HDFCBANK.NS")
+        shares = st.sidebar.text_input("Enter number of shares (comma separated)", "10,20,30")
+        return tickers, shares
 
-    # Function to fetch and process data
+    def display_portfolio_metrics(portfolio_return, portfolio_std, sharpe_ratio):
+        st.subheader("Portfolio Analysis Results", divider="gray")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown('<div class="metric-card">'
+                    f'<div class="metric-value">{portfolio_return:.2%}</div>'
+                    '<div class="metric-label">Portfolio Return</div>'
+                    '</div>', unsafe_allow_html=True)
+        with col2:
+            st.markdown('<div class="metric-card">'
+                    f'<div class="metric-value">{portfolio_std:.2%}</div>'
+                    '<div class="metric-label">Portfolio Risk (Std Dev)</div>'
+                    '</div>', unsafe_allow_html=True)
+        with col3:
+            st.markdown('<div class="metric-card">'
+                    f'<div class="metric-value">{sharpe_ratio:.2f}</div>'
+                    '<div class="metric-label">Sharpe Ratio</div>'
+                    '</div>', unsafe_allow_html=True)
+
+    def display_stock_returns(tickers, annual_returns):
+        st.subheader("Individual Stock Returns", divider="gray")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        for ticker, ret in zip(tickers, annual_returns):
+            st.markdown(f'<div style="padding: 0.5rem 0;">{ticker}: <strong>{ret:.2%}</strong></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    def display_portfolio_composition(tickers, current_values):
+        st.subheader("Portfolio Composition", divider="gray")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        fig, ax = plt.subplots()
+        ax.pie(current_values, labels=tickers, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')
+        st.pyplot(fig)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    def display_portfolio_performance(data, tickers, shares):
+        portfolio_value = pd.Series(1.0, index=data[tickers[0]].index)
+        for ticker, share_count in zip(tickers, shares):
+            portfolio_value = portfolio_value * (1 + data[ticker]['DailyReturn'].fillna(0) * (share_count * data[ticker]['Adj Close'].iloc[-1]))
+
+        st.subheader("Portfolio Performance", divider="gray")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        fig, ax = plt.subplots()
+        portfolio_value.plot(ax=ax)
+        ax.set_ylabel("Portfolio Value")
+        ax.set_title("Portfolio Growth Over Time")
+        st.pyplot(fig)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    def display_news(ticker):
+        st.subheader(f"Latest News for {ticker}", divider="gray")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        try:
+            stock_name = ticker.replace('.NS', '')
+            news_feed = feedparser.parse(f"https://news.google.com/rss/search?q={stock_name}+stock&hl=en-IN&gl=IN&ceid=IN:en")
+            if news_feed.entries:
+                for entry in news_feed.entries[:5]:
+                    st.markdown(f'<div style="margin-bottom: 1.5rem;">'
+                            f'<div style="font-size: 1.1rem; font-weight: bold;">{entry.title}</div>'
+                            f'<div style="color: #a0a0a0; font-size: 0.9rem;">{entry.source.title} - {entry.published}</div>'
+                            f'<a href="{entry.link}" style="color: #4dabf7; text-decoration: none;">Read more →</a>'
+                            '</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="color: #a0a0a0;">No recent news available for this stock.</div>', unsafe_allow_html=True)
+        except Exception as e:
+            st.markdown(f'<div style="color: #ff6b6b;">Could not fetch news for {ticker}: {str(e)}</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Utils
+    def process_inputs(tickers, shares):
+        tickers = [ticker.strip() for ticker in tickers.split(",")]
+        shares = [int(share) for share in shares.split(",")]
+        return tickers, shares
+
+    def get_date_range():
+        end_date = pd.Timestamp.today()
+        start_date = end_date - pd.Timedelta(days=365)
+        return start_date, end_date
+
     def fetch_data(tickers, start_date, end_date):
-        Returns = []
+        data = {}
         for ticker in tickers:
-            df = yf.download(ticker, start=start_date, end=end_date, progress=False)
-            df['DailyReturn'] = np.log(df['Adj Close']).diff()
-            Returns.append(df)
-        return Returns
+            df = yf.download(ticker, start=start_date, end=end_date)
+            df['DailyReturn'] = df['Adj Close'].pct_change()
+            data[ticker] = df
+        return data
 
-    # Function to calculate portfolio metrics
-    def calculate_metrics(Returns, weights):
-        # Validate inputs
-        if len(Returns) == 0 or len(weights) == 0:
-            raise ValueError("Returns and weights cannot be empty")
-        if len(weights) != len(Returns):
-            raise ValueError("Number of weights must match number of returns")
-            
+    def calculate_metrics(data, shares, tickers):
         annual_returns = []
-        for i, df in enumerate(Returns):
-            if df.empty or 'Adj Close' not in df.columns:
-                raise ValueError(f"Invalid data for return {i}")
-            initial = df['Adj Close'].iloc[0]
-            last = df['Adj Close'].iloc[-1]
-            annual_returns.append((last / initial - 1))
+        current_values = []
+        for ticker, share_count in zip(tickers, shares):
+            initial = data[ticker]['Adj Close'].iloc[0]
+            final = data[ticker]['Adj Close'].iloc[-1]
+            annual_returns.append((final / initial) - 1)
+            current_values.append(final * share_count)
         
-        # Convert to numpy arrays and ensure proper shapes
-        annual_returns = np.array(annual_returns)
-        weights = np.array(weights)
+        total_value = sum(current_values)
+        weights = np.array([value / total_value for value in current_values])
         
-        # Calculate portfolio return
+        returns_df = pd.DataFrame({ticker: data[ticker]['DailyReturn'].dropna() for ticker in tickers})
+        returns_df = returns_df.dropna()
+        cov_matrix = np.cov(returns_df.values.T)
+        portfolio_std = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+
         portfolio_return = np.dot(annual_returns, weights)
+        sharpe_ratio = portfolio_return / portfolio_std
         
-        # Calculate portfolio standard deviation
-        daily_returns = [df['DailyReturn'].dropna() for df in Returns]
-        if len(daily_returns) == 0:
-            portfolio_std_dev = 0.0
-        else:
-            # Ensure all daily returns have same length
-            min_length = min(len(dr) for dr in daily_returns)
-            daily_returns = [dr[:min_length] for dr in daily_returns]
-            cov_matrix = np.cov(daily_returns)
-            portfolio_std_dev = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+        return annual_returns, portfolio_return, portfolio_std, sharpe_ratio, weights, current_values
+
+    # Main App
+    def main():
+        # Navigation
+
+
+        selected = create_navigation()
         
-        return annual_returns.tolist(), portfolio_return, portfolio_std_dev
-
-
-    # Definitions of financial metrics
-    # Beta: A measure of a stock's volatility in relation to the market.
-    # Standard Deviation: A measure of the amount of variation or dispersion of a set of values.
-    # Expected Portfolio Return (CAPM): The return expected from an asset based on its risk compared to the market.
-    # Sharpe Ratio: A measure of risk-adjusted return.
-    # Jensen's Alpha: A measure of the excess return of a portfolio over the expected return.
-    # Treynor Ratio: A measure of returns earned in excess of that which could have been earned on a riskless investment per each unit of market risk.
-
-    # Function to calculate CAPM
-    def CAPM(beta, market_return):
-        return Rf + beta * (market_return - Rf)
-
-    # Function to calculate Sharpe Ratio
-    def Sharpe(portfolio_return, portfolio_std_dev, risk_free_rate):
-        return (portfolio_return - risk_free_rate) / portfolio_std_dev
-
-    # Function to calculate Jensen's Alpha
-    def JensenAlpha(portfolio_return, beta, market_return):
-        return portfolio_return - CAPM(beta, market_return)
-
-    # Function to calculate Treynor Ratio
-    def Treynor(portfolio_return, beta, risk_free_rate):
-        return (portfolio_return - risk_free_rate) / beta
-
-    # Function to calculate regression for beta
-    def calculate_beta(Returns, market_returns):
-        pfdr = pd.DataFrame({'WeightedDailyReturn': [0] * len(Returns[0])})
-        pfdr.index = Returns[0].index
-
-        for i in range(len(Returns)):
-            pfdr['WeightedDailyReturn'] += Returns[i]['DailyReturn'].values * weights[i]
-
-        model = sm.OLS(pfdr['WeightedDailyReturn'].dropna(), market_returns.dropna()).fit()
-        return model.params.values[0], model.summary()
-
-    # Function to generate AI-based portfolio summary using Google Gemini
-    def generate_ai_summary(portfolio_return, portfolio_std_dev, beta, expected_return, sharpe_ratio, jensen_alpha, tickers, weights):
-        prompt = f"Generate a detailed summary of a portfolio with the following metrics:\n" \
-                f"Portfolio Return: {round(portfolio_return * 100, 2)}%\n" \
-                f"Portfolio Risk (Standard Deviation): {round(portfolio_std_dev * 100, 2)}%\n" \
-                f"Portfolio Beta: {round(beta, 3)}\n" \
-                f"Expected Return (CAPM): {round(expected_return * 100, 2)}%\n" \
-                f"Sharpe Ratio: {round(sharpe_ratio, 3)}\n" \
-                f"Jensen's Alpha: {round(jensen_alpha * 100, 2)}%\n" \
-                f"Asset Allocation: {', '.join([f'{tickers[i]}: {weights[i] * 100:.2f}%' for i in range(len(tickers))])}\n" \
-                f"Provide insights on performance, risk profile, and overall assessment."
+        # Sidebar
+        tickers, shares = create_sidebar()
+        tickers, shares = process_inputs(tickers, shares)
+        start_date, end_date = get_date_range()
+        data = fetch_data(tickers, start_date, end_date)
         
-        response = model.generate_content(prompt)  # Call the Gemini API to get the summary
-        return response.text  # Return the generated summary
+        if selected == "Portfolio Analysis":
+            annual_returns, portfolio_return, portfolio_std, sharpe_ratio, weights, current_values = calculate_metrics(data, shares, tickers)
+            
+            display_portfolio_metrics(portfolio_return, portfolio_std, sharpe_ratio)
+            display_stock_returns(tickers, annual_returns)
+            display_portfolio_composition(tickers, current_values)
+            display_portfolio_performance(data, tickers, shares)
+        elif selected == "News":
+            for ticker in tickers:
+                display_news(ticker)
 
-    # Streamlit app layout
-    st.title("Python Portfolio Performance Analyzer")
-    # Adding the logo
+    if __name__ == "__main__":
+        main()
 
-    # User inputs
-    tickers = st.text_input("Enter stock tickers (comma-separated)", "RELIANCE.NS, HCLTECH.NS, BHARTIARTL.NS, SBIN.NS, SUNPHARMA.NS")
-    weights_input = st.text_input("Enter weights (comma-separated)", "0.15, 0.15, 0.25, 0.15, 0.30")
-    Rf = 0.06  # Risk-free rate
-
-    # Process user inputs
-    tickers = [ticker.strip() for ticker in tickers.split(',')]
-    weights = [float(weight) for weight in weights_input.split(',')]
-
-    # Dates for data retrieval
-    end_date = date.today()
-    start_date = end_date - timedelta(days=366)
-
-    # Fetch data
-    Returns = fetch_data(tickers, start_date, end_date)
-
-    # Calculate metrics
-    annual_returns, portfolio_return, portfolio_std_dev = calculate_metrics(Returns, weights)
-
-    # Fetch market data (Nifty)
-    market_data = fetch_data(['^NSEI'], start_date, end_date)
-    market_returns = market_data[0]['DailyReturn']
-
-    # Calculate beta
-    beta, beta_summary = calculate_beta(Returns, market_returns)
-
-    # Calculate performance metrics
-    expected_return = CAPM(beta, market_returns.mean())
-    sharpe_ratio = Sharpe(portfolio_return, portfolio_std_dev, Rf)
-    jensen_alpha = JensenAlpha(portfolio_return, beta, market_returns.mean())
-    treynor_ratio = Treynor(portfolio_return, beta, Rf)
-
-    # Display results
-    st.write(f"The Portfolio Return is {round(portfolio_return * 100, 2)}%")
-    st.write(f"The Portfolio Risk (Standard Deviation) is {round(portfolio_std_dev * 100, 2)}%")
-    st.write(f"The Portfolio Beta is {round(beta, 3)}")
-    st.write(f"The Expected Portfolio Return (CAPM) is {round(expected_return * 100, 2)}%")
-    st.write(f"The Sharpe Ratio is {round(sharpe_ratio, 3)}")
-    st.write(f"The Jensen's Alpha is {round(jensen_alpha * 100, 2)}%")
-    st.write(f"The Treynor Ratio is {round(treynor_ratio, 3)}")
-
-    # Visualization
-    st.subheader("Portfolio Composition")
-    plt.figure(figsize=(10, 6))
-    plt.pie(weights, labels=tickers, autopct='%1.1f%%')
-    plt.title('Portfolio Composition')
-    st.pyplot(plt)
-
-    # Display regression summary
-    st.subheader("Regression Summary for Beta")
-    st.write(beta_summary)
-
-    # Additional visualizations for daily returns vs Nifty
-    for i in range(len(Returns)):
-        plt.figure(figsize=(10, 6))
-        plt.plot(Returns[i]['DailyReturn'], label=tickers[i])
-        plt.plot(market_returns, label='Nifty', color='orange')
-        plt.title(f'Daily Returns of {tickers[i]} vs Nifty')
-        plt.xlabel('Date')
-        plt.ylabel('Daily Returns')
-        plt.legend()
-        st.pyplot(plt)
-
-    # Calculate return contribution
-    return_contribution = [weights[i] * annual_returns[i] for i in range(len(annual_returns))]
-
-    # Visualization for Return Contribution using Bar Chart
-    st.subheader("Return Contribution to the Portfolio")
-    plt.figure(figsize=(10, 6))
-    plt.bar(tickers, return_contribution, color='skyblue')
-    plt.title('Return Contribution to the Portfolio')
-    plt.xlabel('Stocks')
-    plt.ylabel('Return Contribution')
-    st.pyplot(plt)
-
-    # Generate and display AI-based portfolio summary
-    st.subheader("Portfolio Analysis Summary (AI based)")
-    summary = generate_ai_summary(portfolio_return, portfolio_std_dev, beta, expected_return, sharpe_ratio, jensen_alpha, tickers, weights)
-    st.write(summary)
-
-    # Additional visualizations can be added here...
+    
