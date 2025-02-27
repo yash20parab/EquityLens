@@ -1,5 +1,5 @@
 streamlit==1.32.0
-yfinance==0.2.54
+yfinance
 requests==2.31.0
 pandas==2.2.3
 numpy==1.26.0
