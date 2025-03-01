@@ -1,0 +1,105 @@
+import streamlit as st
+import urllib.parse
+import pandas as pd
+import requests
+from datetime import datetime
+
+# 🔹 Upstox API Credentials
+CLIENT_ID = "3615d3d7-23b1-4790-81e5-e7f1e2fc09b5"
+CLIENT_SECRET = "se9t1l8nks"
+REDIRECT_URI = "http://localhost:8501/"
+ENCODED_REDIRECT_URI = urllib.parse.quote(REDIRECT_URI, safe="")
+
+# 🔹 Generate Login URL
+auth_url = f"https://api-v2.upstox.com/login/authorization/dialog?response_type=code&client_id={CLIENT_ID}&redirect_uri={ENCODED_REDIRECT_URI}"
+
+# 🔹 Streamlit UI
+st.title("📈 Upstox Stock Dashboard")
+
+st.sidebar.subheader("🔐 Login to Upstox")
+if st.sidebar.button("Login with Upstox"):
+    st.write("🔄 Redirecting to Upstox login...")
+    st.markdown(f"[Click here to login]({auth_url})")
+
+# 🔹 Step 2: Enter Authorization Code (User Input)
+auth_code = st.sidebar.text_input("🔑 Enter Authorization Code")
+
+# 🔹 Step 3: Generate Access Token
+if st.sidebar.button("Get Access Token"):
+    if auth_code:
+        token_url = "https://api-v2.upstox.com/login/authorization/token"
+        payload = {
+            "code": auth_code,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "redirect_uri": REDIRECT_URI,
+            "grant_type": "authorization_code"
+        }
+        headers = {"accept": "application/json", "Api-Version": "2.0", "Content-Type": "application/x-www-form-urlencoded"}
+
+        try:
+            response = requests.post(token_url, headers=headers, data=payload)
+            response.raise_for_status()
+            token_data = response.json()
+            access_token = token_data.get("access_token", None)
+
+            if access_token:
+                st.session_state["access_token"] = access_token
+                st.success("✅ Access Token Generated Successfully!")
+            else:
+                st.error("⚠️ Failed to retrieve access token. Check authorization code.")
+        except requests.exceptions.RequestException as e:
+            st.error(f"⚠️ Error fetching access token: {e}")
+    else:
+        st.warning("⚠️ Please enter an authorization code.")
+
+# 🔹 Check if Access Token is Available
+if "access_token" in st.session_state and st.session_state["access_token"]:
+    HEADERS = {
+        "accept": "application/json",
+        "Api-Version": "2.0",
+        "Authorization": f"Bearer {st.session_state['access_token']}"
+    }
+
+    # 🔹 Fetch Funds & Margin
+    if st.sidebar.button("Get Account Balance"):
+        funds_url = "https://api-v2.upstox.com/user/get-funds-and-margin"
+        response = requests.get(funds_url, headers=HEADERS)
+        if response.status_code == 200:
+            st.subheader("💰 Funds & Margin")
+            st.json(response.json())
+        else:
+            st.error(f"⚠️ Failed to load funds! {response.json()}")
+
+    # 🔹 Load Instrument Data
+    st.sidebar.subheader("📊 Fetch Stock Data")
+    selected_stock = st.sidebar.text_input("Enter Stock Symbol", "RELIANCE").strip().upper()
+
+    if st.sidebar.button("Get Stock Data"):
+        try:
+            file_url = "https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz"
+            df = pd.read_csv(file_url, compression="gzip")
+            df["expiry"] = pd.to_datetime(df["expiry"], errors="coerce").dt.date  # Convert expiry to date format
+            st.subheader("📜 Stock Instruments Data")
+            st.write(df.head())
+
+            # Filter for NIFTY options
+            nifty_df = df[
+                (df["instrument_type"] == "OPTIDX") &
+                (df["tradingsymbol"].str.startswith("BANKNIFTY")) &
+                (df["exchange"] == "NSE_FO")
+            ]
+
+            st.subheader("📌 BANKNIFTY Options Data")
+            st.write(nifty_df)
+
+            # Sort & Show Expiry Dates
+            expiry_list = sorted(nifty_df["expiry"].dropna().unique().tolist())
+            st.subheader("📅 Available Expiry Dates")
+            st.write(expiry_list)
+
+        except Exception as e:
+            st.error(f"⚠️ Error fetching stock data: {e}")
+
+else:
+    st.warning("⚠️ Please generate an access token first.")
