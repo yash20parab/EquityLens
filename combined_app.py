@@ -710,12 +710,16 @@ if selected == "Portfolio Analysis and News":
     
     
     # Header
+    st.markdown("---")
+    
     st.markdown("""
         <div class="header">
             <h1>Welcome to Your Stock Portfolio</h1>
             <p class="header-text">Track, analyze, and stay updated with your Indian stock investments—all in one place.</p>
         </div>
     """, unsafe_allow_html=True)
+
+    st.markdown("---")
     
     # Main navigation with only two options
     selected = option_menu(
@@ -724,6 +728,8 @@ if selected == "Portfolio Analysis and News":
         default_index=0,
         orientation="horizontal",
     )
+
+    st.markdown("---")
     
     # Timeframe options mapping
     TIMEFRAME_OPTIONS = {
@@ -785,7 +791,11 @@ if selected == "Portfolio Analysis and News":
         if "portfolio" not in st.session_state or not st.session_state.portfolio:
             st.markdown("<div class='card'>Add stocks in the sidebar to see your portfolio analysis!</div>", unsafe_allow_html=True)
         else:
+            st.markdown("---")
+            
             st.header("Portfolio Analysis")
+
+            st.markdown("---")
             
             # Timeframe selection
             selected_timeframe = st.selectbox(
@@ -793,6 +803,8 @@ if selected == "Portfolio Analysis and News":
                 list(TIMEFRAME_OPTIONS.keys()),
                 index=0
             )
+
+            st.markdown("---")
             
             # Fetch data based on selected timeframe
             nifty_data = yf.Ticker("^NSEI").history(period=TIMEFRAME_OPTIONS[selected_timeframe])
@@ -858,6 +870,8 @@ if selected == "Portfolio Analysis and News":
                 except Exception as e:
                     st.error(f"Error with {stock['Ticker']}: {e}")
     
+            st.markdown("---")
+            
             # Portfolio table
             df = pd.DataFrame(portfolio_data)
             st.dataframe(df.style.format({
@@ -867,6 +881,8 @@ if selected == "Portfolio Analysis and News":
                 "Div Yield (%)": "{:.2f}", "Intraday Vol (%)": "{:.2f}",
                 "Rel Strength vs Nifty (%)": "{:.2f}", "Days to Breakeven": "{}"
             }), use_container_width=True)
+
+            st.markdown("---")
     
             # Summary
             st.subheader("Portfolio Summary")
@@ -895,6 +911,8 @@ if selected == "Portfolio Analysis and News":
             with col6:
                 st.markdown(f"<div class='metric-box'><b>Div Yield Contribution</b><br>{div_yield_contrib:.2f}%</div>", unsafe_allow_html=True)
     
+            st.markdown("---")
+            
             # Portfolio vs Nifty 50 Comparison
             st.subheader("Portfolio vs Nifty 50 Comparison")
             portfolio_normalized = (portfolio_value_history / portfolio_value_history.iloc[0]) * 100
@@ -923,11 +941,13 @@ if selected == "Portfolio Analysis and News":
             with col3:
                 st.markdown(f"<div class='metric-box'><b>Correlation with Nifty</b><br>{correlation:.2f}</div>", unsafe_allow_html=True)
     
+            st.markdown("---")
+            
             # Normalized Price Chart for individual stocks
             st.subheader("Normalized Price Performance")
             st.line_chart(normalized_data, use_container_width=True)
     
-            
+            st.markdown("---")        
     
             # Profit/Loss Chart
             st.subheader("Profit/Loss by Stock")
