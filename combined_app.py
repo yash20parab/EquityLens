@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import google.generativeai as genai  # Import Google Gemini for AI-based summary
 from PIL import Image
 from streamlit_option_menu import option_menu
+from concurrent.futures import ThreadPoolExecutor
 
 
 # Streamlit app layout
@@ -411,111 +412,90 @@ if selected == "Home":
 
 
 if selected == "Market Status":
+    st.markdown("""
+        <style>
+        .main .block-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+        .stApp {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Configure session with proper NSE cookies and headers
-    def create_nse_session():
-        session = requests.Session()
-        # Initial request to set cookies
-        session.get("https://www.nseindia.com/", headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive"
-        }, timeout=10)
-        return session
+    def fetch_symbol_data(symbol):
+        try:
+            yf_symbol = f"{symbol}.NS"
+            stock = yf.Ticker(yf_symbol)
+            info = stock.info
+            
+            company_name = info.get('longName', symbol)
+            sector = info.get('sector', 'Unknown Sector')
+            market_cap = info.get('marketCap', 0)
+            market_cap_cr = round(max(market_cap / 1e7, 0.01), 2)
+            current_price = info.get('currentPrice', info.get('previousClose', 0))
+            previous_close = info.get('previousClose', 0)
+            p_change = ((current_price - previous_close) / previous_close * 100) if previous_close else 0
+
+            return {
+                "Symbol": symbol,
+                "Name": company_name,
+                "Sector": sector,
+                "MarketCap": market_cap_cr,
+                "PriceChange": round(p_change, 2),
+                "LastPrice": current_price
+            }
+        except Exception as e:
+            st.warning(f"Error fetching {symbol} from Yahoo Finance: {e}")
+            return create_error_data(symbol)
+
+    def create_error_data(symbol):
+        return {
+            "Symbol": symbol,
+            "Name": symbol,
+            "Sector": "Error",
+            "MarketCap": 0.01,
+            "PriceChange": 0,
+            "LastPrice": 0
+        }
 
     @st.cache_data(ttl=300)
-    def fetch_nse_data(symbols):
-        data = []
-        session = create_nse_session()
+    def fetch_yfinance_data(symbols):
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            results = list(executor.map(fetch_symbol_data, symbols))
+        df = pd.DataFrame(results)
         
-        for idx, symbol in enumerate(symbols):
-            try:
-                # Rate limiting
-                if idx > 0:
-                    time.sleep(0.5) # 1 second delay between requests
-
-                # Fetch equity quote
-                quote_url = f"https://www.nseindia.com/api/quote-equity?symbol={symbol}"
-                headers = {
-                    "Referer": f"https://www.nseindia.com/get-quotes/equity?symbol={symbol}",
-                    "X-Requested-With": "XMLHttpRequest",
-                    "Authority": "www.nseindia.com",
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
-                }
-
-                # Retry logic
-                for attempt in range(3):
-                    try:
-                        response = session.get(quote_url, headers=headers, timeout=15)
-                        response.raise_for_status()
-                        quote_data = response.json()
-                        break
-                    except Exception as e:
-                        if attempt == 2:
-                            raise
-                        time.sleep(2)
-                        session = create_nse_session()
-
-                # Fetch market status to maintain session
-                session.get("https://www.nseindia.com/api/marketStatus", headers=headers, timeout=5)
-
-                # Extract NSE data
-                company_name = quote_data.get('info', {}).get('companyName', symbol)
-                sector = quote_data.get('info', {}).get('industry', 'Unknown Sector')
-                price_info = quote_data.get('priceInfo', {})
-                p_change = price_info.get('pChange', 0)
-                last_price = price_info.get('lastPrice', 0)
-
-                # Get market cap from Yahoo Finance
-                try:
-                    yf_symbol = f"{symbol}.NS"
-                    stock = yf.Ticker(yf_symbol)
-                    market_cap = stock.info.get('marketCap', 0)
-                    # Convert to Crores (1 Cr = 10^7)
-                    market_cap_cr = round(max(market_cap / 1e7, 0.01), 2)
-                except Exception as yf_error:
-                    st.warning(f"YFinance error for {symbol}: {str(yf_error)}")
-                    market_cap_cr = 0.01
-
-                data.append({
-                    "Symbol": symbol,
-                    "Name": company_name,
-                    "Sector": sector,
-                    "MarketCap": market_cap_cr,
-                    "PriceChange": round(p_change, 2),
-                    "LastPrice": last_price
-                })
-
-            except Exception as e:
-                st.error(f"Error fetching {symbol}: {str(e)}")
-                data.append({
-                    "Symbol": symbol,
-                    "Name": symbol,
-                    "Sector": "Error",
-                    "MarketCap": 0.01,
-                    "PriceChange": 0,
-                    "LastPrice": 0
-                })
-
-        return pd.DataFrame(data)
+        fetched_symbols = set(df['Symbol'])
+        input_symbols = set(symbols)
+        missing = input_symbols - fetched_symbols
+        if missing:
+            st.warning(f"Missing data for: {', '.join(missing)}")
+        
+        return df
 
     def main():
-        st.title("NIFTY 50 HEATMAP")
+        st.title("MARKETS AT A GLANCE - Nifty 50 heatmap")
         
-        # Default equity symbols (avoid index symbols)
-        default_symbols = ['TATASTEEL', 'NTPC', 'WIPRO', 'ITC', 'RELIANCE', 'SHRIRAMFIN', 'ONGC', 'COALINDIA', 'BHARTIARTL', 'INDUSINDBK', 'HINDALCO', 'KOTAKBANK', 'TATACONSUM', 'HDFCLIFE', 'LT', 'TCS', 'CIPLA', 'TRENT', 'ADANIENT', 'BAJAJFINSV', 'BRITANNIA', 'BAJFINANCE', 'TITAN', 'NESTLEIND', 'ULTRACEMCO', 'HEROMOTOCO', 'BAJAJ-AUTO', 'MARUTI', 'APOLLOHOSP', 'HDFCBANK', 'ICICIBANK', 'INFY', 'SBIN', 'HINDUNILVR', 'HCLTECH', 'SUNPHARMA', 'M&M', 'AXISBANK', 'POWERGRID', 'TATAMOTORS', 'ADANIPORTS', 'JSWSTEEL', 'ASIANPAINT', 'BEL', 'TECHM', 'GRASIM', 'EICHERMOT', 'BPCL', 'DRREDDY']
+        default_symbols = ['TATASTEEL', 'NTPC', 'WIPRO', 'ITC', 'RELIANCE', 'SHRIRAMFIN', 'ONGC', 
+                        'COALINDIA', 'BHARTIARTL', 'INDUSINDBK', 'HINDALCO', 'KOTAKBANK', 
+                        'TATACONSUM', 'HDFCLIFE', 'LT', 'TCS', 'CIPLA', 'TRENT', 'ADANIENT', 
+                        'BAJAJFINSV', 'BRITANNIA', 'BAJFINANCE', 'TITAN', 'NESTLEIND', 
+                        'ULTRACEMCO', 'HEROMOTOCO', 'BAJAJ-AUTO', 'MARUTI', 'APOLLOHOSP', 
+                        'HDFCBANK', 'ICICIBANK', 'INFY', 'SBIN', 'HINDUNILVR', 'HCLTECH', 
+                        'SUNPHARMA', 'M&M', 'AXISBANK', 'POWERGRID', 'TATAMOTORS', 
+                        'ADANIPORTS', 'JSWSTEEL', 'ASIANPAINT', 'BEL', 'TECHM', 'GRASIM', 
+                        'EICHERMOT', 'BPCL', 'DRREDDY']
 
-        # Symbol management
-        
-
-        # Data fetching
-        with st.spinner("Fetching real-time data from NSE + Yahoo Finance..."):
-            df = fetch_nse_data(default_symbols)
+        with st.spinner("Fetching data from Yahoo Finance..."):
+            df = fetch_yfinance_data(tuple(default_symbols))
             valid_df = df[df['Sector'] != 'Error']
             valid_df = valid_df[valid_df['MarketCap'] > 0]
+            
+            st.write(f"")
 
-        # Filters
         with st.sidebar:
             st.header("Filters")
             sector_options = valid_df["Sector"].unique()
@@ -524,13 +504,9 @@ if selected == "Market Status":
                 options=sector_options,
                 default=sector_options
             )
-        
+
         filtered_df = valid_df[valid_df["Sector"].isin(selected_sectors)]
 
-        # Display raw data
-        
-
-        # Create visualization
         if not filtered_df.empty:
             fig = px.treemap(
                 filtered_df,
@@ -540,39 +516,39 @@ if selected == "Market Status":
                 color_continuous_scale='viridis',
                 color_continuous_midpoint=0,
                 hover_data=['MarketCap', 'PriceChange', 'LastPrice'],
-                branchvalues='total'
+                width=None,
+                height=800
             )
 
             fig.update_traces(
-                texttemplate=(
-                    "<b>%{label}</b><br>"
-                    "M Cap: ₹%{customdata[0]:,.1f} Cr<br>"
-                    "Change: %{customdata[1]:+.2f}%<br>"
-                    "Price: ₹%{customdata[2]:,.1f}"
-                ),
-                hovertemplate=(
-                    "<b>%{label}</b><br>"
-                    "Market Cap: ₹%{customdata[0]:,.1f} Cr<br>"
-                    "Price Change: %{customdata[1]:+.2f}%<br>"
-                    "Last Price: ₹%{customdata[2]:,.1f}<extra></extra>"
-                )
+                texttemplate="%{label}<br>M Cap: ₹%{customdata[0]:,.1f} Cr<br>Change: %{customdata[1]:+.2f}%<br>Price: ₹%{customdata[2]:,.1f}",
+                hovertemplate="%{label}<br>Market Cap: ₹%{customdata[0]:,.1f} Cr<br>Price Change: %{customdata[1]:+.2f}%<br>Last Price: ₹%{customdata[2]:,.1f}<extra></extra>"
             )
 
             fig.update_layout(
-                margin=dict(t=30, l=0, r=0, b=0),
+                margin=dict(t=50, l=0, r=0, b=0),
                 coloraxis_colorbar=dict(
                     title="Price Change (%)",
                     tickprefix="+",
                     ticksuffix="%"
-                )
+                ),
+                autosize=True
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            # Use a full-width container to display the chart
+            with st.container():
+                st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
+
         else:
-            st.warning("No valid data available for selected filters!")
+            st.warning("No valid data available!")
 
     if __name__ == "__main__":
         main()
+
+    
+
+
+
 
 
 if selected == "Portfolio Analysis and News":
@@ -590,11 +566,17 @@ if selected == "Portfolio Analysis and News":
             }
         )
 
+
+
+
     def create_sidebar():
         st.sidebar.header("Portfolio Configuration", divider="gray")
         tickers = st.sidebar.text_input("Enter Indian stock tickers (comma separated, add .NS suffix)", "RELIANCE.NS,TCS.NS,HDFCBANK.NS")
         shares = st.sidebar.text_input("Enter number of shares (comma separated)", "10,20,30")
         return tickers, shares
+
+
+
 
     def display_portfolio_metrics(portfolio_return, portfolio_std, sharpe_ratio):
         st.subheader("Portfolio Analysis Results", divider="gray")
@@ -615,12 +597,18 @@ if selected == "Portfolio Analysis and News":
                     '<div class="metric-label">Sharpe Ratio</div>'
                     '</div>', unsafe_allow_html=True)
 
+
+
+
     def display_stock_returns(tickers, annual_returns):
         st.subheader("Individual Stock Returns", divider="gray")
         st.markdown('<div class="card">', unsafe_allow_html=True)
         for ticker, ret in zip(tickers, annual_returns):
             st.markdown(f'<div style="padding: 0.5rem 0;">{ticker}: <strong>{ret:.2%}</strong></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
+
+
+
 
     def display_portfolio_composition(tickers, current_values):
         st.subheader("Portfolio Composition", divider="gray")
@@ -630,6 +618,9 @@ if selected == "Portfolio Analysis and News":
         ax.axis('equal')
         st.pyplot(fig)
         st.markdown('</div>', unsafe_allow_html=True)
+
+
+
 
     def display_portfolio_performance(data, tickers, shares):
         portfolio_value = pd.Series(1.0, index=data[tickers[0]].index)
@@ -644,6 +635,9 @@ if selected == "Portfolio Analysis and News":
         ax.set_title("Portfolio Growth Over Time")
         st.pyplot(fig)
         st.markdown('</div>', unsafe_allow_html=True)
+
+
+
 
     def display_news(ticker):
         st.subheader(f"Latest News for {ticker}", divider="gray")
@@ -664,16 +658,23 @@ if selected == "Portfolio Analysis and News":
             st.markdown(f'<div style="color: #ff6b6b;">Could not fetch news for {ticker}: {str(e)}</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
+
+
+
     # Utils
     def process_inputs(tickers, shares):
         tickers = [ticker.strip() for ticker in tickers.split(",")]
         shares = [int(share) for share in shares.split(",")]
         return tickers, shares
 
+
+
     def get_date_range():
         end_date = pd.Timestamp.today()
         start_date = end_date - pd.Timedelta(days=365)
         return start_date, end_date
+
+
 
     def fetch_data(tickers, start_date, end_date):
         data = {}
@@ -683,6 +684,8 @@ if selected == "Portfolio Analysis and News":
             data[ticker] = df
         return data
 
+
+
     def calculate_metrics(data, shares, tickers):
         annual_returns = []
         current_values = []
@@ -691,36 +694,57 @@ if selected == "Portfolio Analysis and News":
             final = data[ticker]['Adj Close'].iloc[-1]
             annual_returns.append((final / initial) - 1)
             current_values.append(final * share_count)
-        
+
+
+
         total_value = sum(current_values)
         weights = np.array([value / total_value for value in current_values])
-        
+
+
+
         returns_df = pd.DataFrame({ticker: data[ticker]['DailyReturn'].dropna() for ticker in tickers})
         returns_df = returns_df.dropna()
         cov_matrix = np.cov(returns_df.values.T)
         portfolio_std = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
 
+
+
         portfolio_return = np.dot(annual_returns, weights)
         sharpe_ratio = portfolio_return / portfolio_std
-        
+
+
+
         return annual_returns, portfolio_return, portfolio_std, sharpe_ratio, weights, current_values
+
+
 
     # Main App
     def main():
         # Navigation
 
 
+
+
         selected = create_navigation()
-        
+
+
+
+
         # Sidebar
         tickers, shares = create_sidebar()
         tickers, shares = process_inputs(tickers, shares)
         start_date, end_date = get_date_range()
         data = fetch_data(tickers, start_date, end_date)
         
+
+
+
         if selected == "Portfolio Analysis":
             annual_returns, portfolio_return, portfolio_std, sharpe_ratio, weights, current_values = calculate_metrics(data, shares, tickers)
-            
+
+
+
+
             display_portfolio_metrics(portfolio_return, portfolio_std, sharpe_ratio)
             display_stock_returns(tickers, annual_returns)
             display_portfolio_composition(tickers, current_values)
@@ -728,6 +752,9 @@ if selected == "Portfolio Analysis and News":
         elif selected == "News":
             for ticker in tickers:
                 display_news(ticker)
+
+
+
 
     if __name__ == "__main__":
         main()
