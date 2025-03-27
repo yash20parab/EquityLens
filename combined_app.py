@@ -719,7 +719,7 @@ if selected == "Portfolio Analysis and News":
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("---")
+    
     
     # Main navigation with only two options
     selected = option_menu(
@@ -791,7 +791,7 @@ if selected == "Portfolio Analysis and News":
         if "portfolio" not in st.session_state or not st.session_state.portfolio:
             st.markdown("<div class='card'>Add stocks in the sidebar to see your portfolio analysis!</div>", unsafe_allow_html=True)
         else:
-            st.markdown("---")
+            
             
             st.header("Portfolio Analysis")
 
@@ -870,7 +870,7 @@ if selected == "Portfolio Analysis and News":
                 except Exception as e:
                     st.error(f"Error with {stock['Ticker']}: {e}")
     
-            st.markdown("---")
+            
             
             # Portfolio table
             df = pd.DataFrame(portfolio_data)
@@ -953,10 +953,7 @@ if selected == "Portfolio Analysis and News":
             st.subheader("Profit/Loss by Stock")
             st.bar_chart(df.set_index("Ticker")["Profit/Loss (INR)"], use_container_width=True)
     
-            # Download
-            csv = df.to_csv(index=False)
-            b64 = base64.b64encode(csv.encode()).decode()
-            st.markdown(f'<a href="data:file/csv;base64,{b64}" download="portfolio.csv"><button>Download Portfolio</button></a>', unsafe_allow_html=True)
+            
     
     # News section modification
     # News section with enhanced styling
