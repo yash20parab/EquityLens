@@ -11,4 +11,4 @@ Pillow
 streamlit-option-menu
 feedparser
 bs4
-base64
+
