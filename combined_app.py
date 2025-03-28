@@ -559,19 +559,20 @@ if selected == "Market Status":
 if selected == "Portfolio Analysis and News":
     
     def get_stock_suggestions(query):
-    url = f"http://d.yimg.com/autoc.finance.yahoo.com/autoc?query={query}&region=IN&lang=en-IN"
-    try:
-        response = requests.get(url)
-        data = json.loads(response.text.replace("YAHOO.Finance.SymbolSuggest.ssCallback(", "").rstrip(")"))
-        suggestions = [
-            f"{item['symbol']} - {item['name']}"
-            for item in data["ResultSet"]["Result"]
-            if item["exchDisp"] in ["NSE", "BSE"]  # Filter for Indian stocks
-        ]
-        return suggestions[:10]  # Limit to 10 suggestions
-    except Exception as e:
-        st.error(f"Error fetching suggestions: {e}")
-        return []
+        
+        url = f"http://d.yimg.com/autoc.finance.yahoo.com/autoc?query={query}&region=IN&lang=en-IN"
+        try:
+            response = requests.get(url)
+            data = json.loads(response.text.replace("YAHOO.Finance.SymbolSuggest.ssCallback(", "").rstrip(")"))
+            suggestions = [
+                f"{item['symbol']} - {item['name']}"
+                for item in data["ResultSet"]["Result"]
+                if item["exchDisp"] in ["NSE", "BSE"]  # Filter for Indian stocks
+            ]
+            return suggestions[:10]  # Limit to 10 suggestions
+        except Exception as e:
+            st.error(f"Error fetching suggestions: {e}")
+            return []
 
     # Configure Gemini API
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII")  # Set in secrets.toml
