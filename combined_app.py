@@ -823,6 +823,7 @@ if selected == "Portfolio Analysis and News":
             if not st.session_state.portfolio:
                 st.markdown("<div>Add stocks in the sidebar to see your portfolio analysis!</div>", unsafe_allow_html=True)
             else:
+                st.markdown("---")
                 st.header("Portfolio Analysis")
                 selected_timeframe = st.selectbox("Select Timeframe", list(TIMEFRAME_OPTIONS.keys()), index=0)
                 
@@ -890,10 +891,12 @@ if selected == "Portfolio Analysis and News":
                 }), use_container_width=True)
     
                 # Gemini AI Analysis
+                st.markdown("---")
                 st.subheader("AI-Powered Portfolio Insights (Powered by Gemini)")
                 gemini_analysis = get_gemini_portfolio_analysis(df)
                 st.markdown(gemini_analysis)
     
+                st.markdown("---")
                 st.subheader("Portfolio Summary")
                 total_investment = sum(stock["Shares"] * stock["Buy Price"] for stock in st.session_state.portfolio)
                 total_value_sum = df["Total Value (INR)"].sum()
@@ -920,6 +923,7 @@ if selected == "Portfolio Analysis and News":
                 with col6:
                     st.markdown(f"<div class='metric-box'><b>Div Yield Contribution</b><br>{div_yield_contrib:.2f}%</div>", unsafe_allow_html=True)
     
+                st.markdown("---")
                 st.subheader("Portfolio vs Nifty 50 Comparison")
                 portfolio_normalized = (portfolio_value_history / portfolio_value_history.iloc[0]) * 100
                 nifty_normalized = (nifty_close / nifty_close.iloc[0]) * 100
@@ -941,9 +945,11 @@ if selected == "Portfolio Analysis and News":
                 with col3:
                     st.markdown(f"<div class='metric-box'><b>Correlation with Nifty</b><br>{correlation:.2f}</div>", unsafe_allow_html=True)
     
+                st.markdown("---")
                 st.subheader("Normalized Price Performance")
                 st.line_chart(normalized_data, use_container_width=True)
     
+                st.markdown("---")
                 st.subheader("Profit/Loss by Stock")
                 st.bar_chart(df.set_index("Ticker")["Profit/Loss (INR)"], use_container_width=True)
     
@@ -955,6 +961,7 @@ if selected == "Portfolio Analysis and News":
                 st.markdown("<div>Add stocks in the sidebar to see news!</div>", unsafe_allow_html=True)
             else:
                 st.header("Stock News")
+                st.markdown("---")
                 for stock in st.session_state.portfolio:
                     with st.expander(f"{stock['Ticker']} News", expanded=False):
                         try:
