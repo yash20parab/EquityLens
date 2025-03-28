@@ -11,4 +11,5 @@ Pillow
 streamlit-option-menu
 feedparser
 bs4
-
+google-generativeai
+supabase
