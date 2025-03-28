@@ -947,9 +947,7 @@ if selected == "Portfolio Analysis and News":
                 st.subheader("Profit/Loss by Stock")
                 st.bar_chart(df.set_index("Ticker")["Profit/Loss (INR)"], use_container_width=True)
     
-                csv = df.to_csv(index=False)
-                b64 = base64.b64encode(csv.encode()).decode()
-                st.markdown(f'<a href="data:file/csv;base64,{b64}" download="portfolio.csv"><button>Download Portfolio</button></a>', unsafe_allow_html=True)
+                
     
         # News Section
         elif selected == "News":
