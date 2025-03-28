@@ -558,7 +558,12 @@ if selected == "Market Status":
 
 if selected == "Portfolio Analysis and News":
     
+    # Load stock list from CSV
+    @st.cache_data
+    def load_stock_list():
+        return pd.read_csv("stocks.csv")  # Ensure stocks.csv is in your repo
     
+    stock_df = load_stock_list()
 
     # Configure Gemini API
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII")  # Set in secrets.toml
@@ -769,7 +774,7 @@ if selected == "Portfolio Analysis and News":
             "Year to Date": "ytd"
         }
     
-        # Sidebar with Logout at the top
+        # Sidebar with CSV Autocomplete
         with st.sidebar:
             if st.button("Logout"):
                 st.session_state.logged_in = False
@@ -778,7 +783,31 @@ if selected == "Portfolio Analysis and News":
                 st.rerun()
     
             st.header(f"Portfolio for {st.session_state.username}")
-            ticker = st.text_input("Stock Ticker (e.g., RELIANCE.NS)", "")
+            
+            # Autocomplete with CSV
+            if "ticker_input" not in st.session_state:
+                st.session_state.ticker_input = ""
+            
+            ticker_input = st.text_input("Stock Ticker (e.g., RELIANCE.NS)", value=st.session_state.ticker_input, 
+                                         help="Start typing to see suggestions", key="ticker")
+            st.session_state.ticker_input = ticker_input
+            
+            if ticker_input:
+                suggestions = stock_df[
+                    stock_df["symbol"].str.contains(ticker_input.upper(), case=False) |
+                    stock_df["name"].str.contains(ticker_input, case=False)
+                ].head(10)  # Limit to 10 suggestions
+                suggestion_options = [f"{row['symbol']} - {row['name']}" for _, row in suggestions.iterrows()]
+                selected_suggestion = st.selectbox("Suggestions", [""] + suggestion_options, 
+                                                   key=f"suggestions_{ticker_input}", 
+                                                   help="Select a stock or continue typing")
+                if selected_suggestion:
+                    ticker = selected_suggestion.split(" - ")[0]
+                else:
+                    ticker = ticker_input.upper()
+            else:
+                ticker = ""
+            
             shares = st.number_input("Shares", min_value=1, value=1)
             buy_price = st.number_input("Buy Price (INR)", min_value=0.0, value=0.0)
     
@@ -814,10 +843,11 @@ if selected == "Portfolio Analysis and News":
             st.markdown("---")
             st.markdown("""
                 ### How to Use
-                - Enter a ticker (e.g., RELIANCE.NS).
+                - Enter a ticker (e.g., RELIANCE.NS) or start typing for suggestions.
                 - Add shares and buy price.
                 - Click 'Add Stock' or 'Clear Portfolio'.
             """, unsafe_allow_html=True)
+        
     
         # Portfolio Analysis
         if selected == "Portfolio Analysis":
