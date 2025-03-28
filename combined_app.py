@@ -20,7 +20,13 @@ from supabase import create_client, Client
 import os
 from bs4 import BeautifulSoup
 
-
+# Load stock list from CSV
+@st.cache_data
+def load_stock_list():
+    df = pd.read_csv("stocks.csv")  # Expects column: symbol
+    return df["symbol"].tolist()  # Return list of symbols
+    
+stock_symbols = load_stock_list()
 
 # Streamlit app layout
 st.set_page_config(page_title="EquityLens", layout="wide")
@@ -558,13 +564,7 @@ if selected == "Market Status":
 
 if selected == "Portfolio Analysis and News":
     
-    # Load stock list from CSV
-    @st.cache_data
-    def load_stock_list():
-        df = pd.read_csv("stocks.csv")  # Expects column: symbol
-        return df["symbol"].tolist()  # Return list of symbols
     
-    stock_symbols = load_stock_list()
 
     # Configure Gemini API
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII")  # Set in secrets.toml
