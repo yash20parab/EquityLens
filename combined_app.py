@@ -775,7 +775,8 @@ if selected == "Portfolio Analysis and News":
         }
     
         
-        # Sidebar with CSV-based Autocomplete
+        
+        # Sidebar with simplified symbol selection
         with st.sidebar:
             if st.button("Logout"):
                 st.session_state.logged_in = False
@@ -785,29 +786,10 @@ if selected == "Portfolio Analysis and News":
     
             st.header(f"Portfolio for {st.session_state.username}")
             
-            # Autocomplete using st.text_input and st.selectbox
-            if "ticker_input" not in st.session_state:
-                st.session_state.ticker_input = ""
+            # Single selectbox for stock symbols
+            ticker = st.selectbox("Stock Ticker (e.g., RELIANCE.NS)", [""] + stock_symbols, 
+                                  help="Select a stock symbol from the list")
             
-            ticker_input = st.text_input("Stock Ticker (e.g., RELIANCE.NS)", value=st.session_state.ticker_input, 
-                                         help="Type symbol or name to filter stocks", key="ticker")
-            st.session_state.ticker_input = ticker_input
-            
-            # Filter stocks based on input
-            if ticker_input:
-                filtered_stocks = stock_df[
-                    stock_df["symbol"].str.contains(ticker_input.upper(), case=False) |
-                    stock_df["name"].str.contains(ticker_input, case=False)
-                ]
-                options = [f"{row['symbol']} - {row['name']}" for _, row in filtered_stocks.iterrows()]
-                if not options:  # If no matches, show all stocks
-                    options = [f"{row['symbol']} - {row['name']}" for _, row in stock_df.iterrows()]
-            else:
-                options = [f"{row['symbol']} - {row['name']}" for _, row in stock_df.iterrows()]
-            
-            selected_option = st.selectbox("Select Stock", [""] + options, help="Choose a stock from the list")
-            ticker = selected_option.split(" - ")[0] if selected_option else ""
-    
             shares = st.number_input("Shares", min_value=1, value=1)
             buy_price = st.number_input("Buy Price (INR)", min_value=0.0, value=0.0)
     
@@ -843,11 +825,19 @@ if selected == "Portfolio Analysis and News":
             st.markdown("---")
             st.markdown("""
                 ### How to Use
-                - Type a symbol (e.g., RELIANCE.NS) or name to filter stocks.
-                - Select a stock from the list.
+                - Select a stock symbol from the list.
                 - Add shares and buy price.
                 - Click 'Add Stock' or 'Clear Portfolio'.
             """, unsafe_allow_html=True)
+        
+                st.markdown("---")
+                st.markdown("""
+                    ### How to Use
+                    - Type a symbol (e.g., RELIANCE.NS) or name to filter stocks.
+                    - Select a stock from the list.
+                    - Add shares and buy price.
+                    - Click 'Add Stock' or 'Clear Portfolio'.
+                """, unsafe_allow_html=True)                
         
     
         # Portfolio Analysis
