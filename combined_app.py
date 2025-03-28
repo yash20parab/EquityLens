@@ -524,7 +524,7 @@ if selected == "Market Status":
                 path=[px.Constant("NSE Stocks"), 'Sector', 'Name'],
                 values='MarketCap',
                 color='PriceChange',
-                color_continuous_scale='RdYlGn',
+                color_continuous_scale='YlOrRd',
                 color_continuous_midpoint=0,
                 hover_data=['MarketCap', 'PriceChange', 'LastPrice'],
                 width=None,
