@@ -561,9 +561,10 @@ if selected == "Portfolio Analysis and News":
     # Load stock list from CSV
     @st.cache_data
     def load_stock_list():
-        return pd.read_csv("stocks.csv")  # Ensure stocks.csv is in your repo
+        df = pd.read_csv("stocks.csv")  # Expects column: symbol
+        return df["symbol"].tolist()  # Return list of symbols
     
-    stock_df = load_stock_list()
+    stock_symbols = load_stock_list()
 
     # Configure Gemini API
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII")  # Set in secrets.toml
