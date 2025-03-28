@@ -560,8 +560,8 @@ if selected == "Portfolio Analysis and News":
     
 
     # Configure Gemini API
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your-gemini-api-key-here")  # Set in secrets.toml
-    genai.configure(api_key=AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII)
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII")  # Set in secrets.toml
+    genai.configure(api_key=GEMINI_API_KEY)
     
     # Configure Supabase (credentials in secrets.toml)
     supabase: Client = create_client(st.secrets["supabase_url"], st.secrets["supabase_key"])
