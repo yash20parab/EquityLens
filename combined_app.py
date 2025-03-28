@@ -788,8 +788,7 @@ if selected == "Portfolio Analysis and News":
             st.header(f"Portfolio for {st.session_state.username}")
             
             # Single selectbox for stock symbols
-            ticker = st.selectbox("Stock Ticker (e.g., RELIANCE.NS)", [""] + stock_symbols, 
-                                  help="Select a stock symbol from the list")
+            ticker = st.selectbox("Stock Ticker (e.g., RELIANCE.NS)", [""] + stock_symbols,help="Select a stock symbol from the list")
             
             shares = st.number_input("Shares", min_value=1, value=1)
             buy_price = st.number_input("Buy Price (INR)", min_value=0.0, value=0.0)
