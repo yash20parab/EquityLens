@@ -830,14 +830,7 @@ if selected == "Portfolio Analysis and News":
                 - Click 'Add Stock' or 'Clear Portfolio'.
             """, unsafe_allow_html=True)
         
-                st.markdown("---")
-                st.markdown("""
-                    ### How to Use
-                    - Type a symbol (e.g., RELIANCE.NS) or name to filter stocks.
-                    - Select a stock from the list.
-                    - Add shares and buy price.
-                    - Click 'Add Stock' or 'Clear Portfolio'.
-                """, unsafe_allow_html=True)                
+                       
         
     
         # Portfolio Analysis
