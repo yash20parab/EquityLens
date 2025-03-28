@@ -785,65 +785,75 @@ if selected == "Portfolio Analysis and News":
     
         # Sidebar with Autocomplete
         with st.sidebar:
-            if st.button("Logout"):
-                st.session_state.logged_in = False
-                st.session_state.username = None
-                st.session_state.portfolio = []
-                st.rerun()
+        if st.button("Logout"):
+            st.session_state.logged_in = False
+            st.session_state.username = None
+            st.session_state.portfolio = []
+            st.rerun()
     
-            st.header(f"Portfolio for {st.session_state.username}")
-            
-            # NEW AUTOCOMPLETE LOGIC
-            ticker_input = st.text_input("Stock Ticker (e.g., RELIANCE.NS)", "", help="Start typing to see suggestions")
-            if ticker_input:
-                suggestions = get_stock_suggestions(ticker_input)
-                selected_suggestion = st.selectbox("Suggestions", [""] + suggestions, help="Select a stock or continue typing")
-                if selected_suggestion:
-                    ticker = selected_suggestion.split(" - ")[0]  # Extract symbol
-                else:
-                    ticker = ticker_input.upper()
+        st.header(f"Portfolio for {st.session_state.username}")
+        
+        # Autocomplete with session state
+        if "ticker_input" not in st.session_state:
+            st.session_state.ticker_input = ""
+        
+        ticker_input = st.text_input("Stock Ticker (e.g., RELIANCE.NS)", value=st.session_state.ticker_input, 
+                                     help="Start typing to see suggestions", key="ticker")
+        st.session_state.ticker_input = ticker_input
+        
+        if ticker_input:
+            suggestions = get_stock_suggestions(ticker_input)
+            st.write(f"Debug: Suggestions: {suggestions}")  # Debug output
+            selected_suggestion = st.selectbox("Suggestions", [""] + suggestions, 
+                                               key=f"suggestions_{ticker_input}", 
+                                               help="Select a stock or continue typing")
+            if selected_suggestion:
+                ticker = selected_suggestion.split(" - ")[0]
             else:
-                ticker = ""
+                ticker = ticker_input.upper()
+        else:
+            ticker = ""
+        
+        st.write(f"Debug: Selected ticker: '{ticker}'")  # Debug output
+        shares = st.number_input("Shares", min_value=1, value=1)
+        buy_price = st.number_input("Buy Price (INR)", min_value=0.0, value=0.0)
     
-            shares = st.number_input("Shares", min_value=1, value=1)
-            buy_price = st.number_input("Buy Price (INR)", min_value=0.0, value=0.0)
-    
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Add Stock"):
-                    if ticker and shares and buy_price:
-                        ticker_upper = ticker.upper()
-                        existing_stock = next((stock for stock in st.session_state.portfolio if stock["Ticker"] == ticker_upper), None)
-                        if existing_stock:
-                            old_shares = existing_stock["Shares"]
-                            old_cost = old_shares * existing_stock["Buy Price"]
-                            new_cost = shares * buy_price
-                            total_shares = old_shares + shares
-                            new_avg_buy_price = (old_cost + new_cost) / total_shares
-                            existing_stock["Shares"] = total_shares
-                            existing_stock["Buy Price"] = new_avg_buy_price
-                            st.success(f"Updated {ticker_upper}!")
-                        else:
-                            st.session_state.portfolio.append({
-                                "Ticker": ticker_upper,
-                                "Shares": shares,
-                                "Buy Price": buy_price
-                            })
-                            st.success(f"Added {ticker_upper}!")
-                        save_portfolio(st.session_state.username, st.session_state.portfolio)
-            with col2:
-                if st.button("Clear Portfolio", key="clear"):
-                    st.session_state.portfolio = []
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Add Stock"):
+                if ticker and shares and buy_price:
+                    ticker_upper = ticker.upper()
+                    existing_stock = next((stock for stock in st.session_state.portfolio if stock["Ticker"] == ticker_upper), None)
+                    if existing_stock:
+                        old_shares = existing_stock["Shares"]
+                        old_cost = old_shares * existing_stock["Buy Price"]
+                        new_cost = shares * buy_price
+                        total_shares = old_shares + shares
+                        new_avg_buy_price = (old_cost + new_cost) / total_shares
+                        existing_stock["Shares"] = total_shares
+                        existing_stock["Buy Price"] = new_avg_buy_price
+                        st.success(f"Updated {ticker_upper}!")
+                    else:
+                        st.session_state.portfolio.append({
+                            "Ticker": ticker_upper,
+                            "Shares": shares,
+                            "Buy Price": buy_price
+                        })
+                        st.success(f"Added {ticker_upper}!")
                     save_portfolio(st.session_state.username, st.session_state.portfolio)
-                    st.success("Portfolio cleared!")
+        with col2:
+            if st.button("Clear Portfolio", key="clear"):
+                st.session_state.portfolio = []
+                save_portfolio(st.session_state.username, st.session_state.portfolio)
+                st.success("Portfolio cleared!")
     
-            st.markdown("---")
-            st.markdown("""
-                ### How to Use
-                - Enter a ticker (e.g., RELIANCE.NS) or start typing for suggestions.
-                - Add shares and buy price.
-                - Click 'Add Stock' or 'Clear Portfolio'.
-            """, unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown("""
+            ### How to Use
+            - Enter a ticker (e.g., RELIANCE.NS) or start typing for suggestions.
+            - Add shares and buy price.
+            - Click 'Add Stock' or 'Clear Portfolio'.
+        """, unsafe_allow_html=True)
     
         # Portfolio Analysis
         if selected == "Portfolio Analysis":
