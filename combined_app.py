@@ -11,10 +11,14 @@ from datetime import date, timedelta
 import statsmodels.api as sm
 import plotly.express as px
 import matplotlib.pyplot as plt
-import google.generativeai as genai  # Import Google Gemini for AI-based summary
 from PIL import Image
 from streamlit_option_menu import option_menu
 from concurrent.futures import ThreadPoolExecutor
+from hashlib import sha256
+import google.generativeai as genai
+from supabase import create_client, Client
+import os
+
 
 
 # Streamlit app layout
@@ -553,17 +557,93 @@ if selected == "Market Status":
 
 if selected == "Portfolio Analysis and News":
     
+    
 
+    # Configure Gemini API
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your-gemini-api-key-here")  # Set in secrets.toml
+    genai.configure(api_key=GEMINI_API_KEY)
+    
+    # Configure Supabase (credentials in secrets.toml)
+    supabase: Client = create_client(st.secrets["supabase_url"], st.secrets["supabase_key"])
+    
+    # Database setup
+    def init_db():
+        # Create tables if they don’t exist (Supabase allows manual table creation via dashboard, but we’ll ensure here)
+        try:
+            supabase.table("users").select("username").limit(1).execute()  # Check if table exists
+        except Exception:
+            supabase.table("users").insert({"username": "dummy", "password": "dummy"}).execute()  # Create table
+            supabase.table("users").delete().eq("username", "dummy").execute()  # Clean up dummy entry
+        
+        try:
+            supabase.table("portfolios").select("username").limit(1).execute()
+        except Exception:
+            supabase.table("portfolios").insert({"username": "dummy", "ticker": "dummy", "shares": 0, "buy_price": 0}).execute()
+            supabase.table("portfolios").delete().eq("username", "dummy").execute()
+    
+    # User authentication functions
+    def hash_password(password):
+        return sha256(password.encode()).hexdigest()
+    
+    def register_user(username, password):
+        try:
+            supabase.table("users").insert({"username": username, "password": hash_password(password)}).execute()
+            return True
+        except Exception as e:
+            if "duplicate key" in str(e).lower():  # Check for unique constraint violation
+                return False
+            raise e
+    
+    def login_user(username, password):
+        response = supabase.table("users").select("password").eq("username", username).execute()
+        if response.data and len(response.data) > 0:
+            return response.data[0]["password"] == hash_password(password)
+        return False
+    
+    def save_portfolio(username, portfolio):
+        supabase.table("portfolios").delete().eq("username", username).execute()  # Clear existing portfolio
+        for stock in portfolio:
+            supabase.table("portfolios").insert({
+                "username": username,
+                "ticker": stock["Ticker"],
+                "shares": stock["Shares"],
+                "buy_price": stock["Buy Price"]
+            }).execute()
+    
+    def load_portfolio(username):
+        response = supabase.table("portfolios").select("*").eq("username", username).execute()
+        return [{"Ticker": row["ticker"], "Shares": row["shares"], "Buy Price": row["buy_price"]} for row in response.data]
+    
+    # Gemini AI portfolio analysis function
+    def get_gemini_portfolio_analysis(portfolio_df):
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        portfolio_summary = portfolio_df.to_string()
+        prompt = f"""
+        You are a financial expert AI. Analyze the following stock portfolio and provide:
+        1. A detailed description of the portfolio.
+        2. Key risks associated with the portfolio.
+        3. Positive aspects and potential benefits of the portfolio.
+        
+        Portfolio Data:
+        {portfolio_summary}
+        """
+        try:
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return f"Error fetching Gemini AI analysis: {str(e)}"
+    
+    # Initialize database
+    init_db()
+    
+    # Enhanced Dark Mode Custom CSS
     st.markdown("""
         <style>
-        /* Global Dark Mode Styling */
         body, .stApp {
             background-color: #121212;
             color: #e0e0e0;
             font-family: 'Arial', sans-serif;
         }
-    
-        /* Header Styling */
         .header {
             background-color: #1e1e1e;
             color: #ffffff;
@@ -573,19 +653,15 @@ if selected == "Portfolio Analysis and News":
             margin-bottom: 20px;
             border: 1px solid #333;
         }
-    
         .header h1 {
             margin-bottom: 10px;
             font-weight: bold;
             color: #4CAF50;
         }
-    
         .header-text {
             color: #b0b0b0;
             font-size: 0.9em;
         }
-    
-        /* Metric Boxes */
         .metric-box {
             background-color: #1e1e1e;
             border: 1px solid #333;
@@ -596,40 +672,17 @@ if selected == "Portfolio Analysis and News":
             margin-bottom: 15px;
             color: #e0e0e0;
         }
-    
-        .metric-box .gain {
-            color: #4CAF50;
-        }
-    
-        .metric-box .loss {
-            color: #F44336;
-        }
-    
-        /* Sidebar */
+        .metric-box .gain { color: #4CAF50; }
+        .metric-box .loss { color: #F44336; }
         .st-emotion-cache-1aumxhk {
             background-color: #1a1a1a;
             border-right: 1px solid #333;
         }
-    
-        /* Input and Number Input Styling */
         .stTextInput input, .stNumberInput input {
             background-color: #2a2a2a !important;
             color: #e0e0e0 !important;
             border: 1px solid #444 !important;
         }
-    
-        /* Option Menu */
-        .st-emotion-cache-1pbsqin {
-            background-color: #1e1e1e;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-    
-        .st-emotion-cache-1pbsqin button {
-            color: #e0e0e0 !important;
-        }
-    
-        /* Buttons */
         .stButton>button {
             background-color: #4CAF50;
             color: white;
@@ -638,12 +691,9 @@ if selected == "Portfolio Analysis and News":
             padding: 10px 20px;
             transition: background-color 0.3s ease;
         }
-    
         .stButton>button:hover {
             background-color: #45a049;
         }
-    
-        /* Tables and Charts */
         .stDataFrame, .stLineChart, .stBarChart {
             background-color: #1e1e1e;
             border-radius: 10px;
@@ -651,19 +701,6 @@ if selected == "Portfolio Analysis and News":
             padding: 15px;
             border: 1px solid #333;
         }
-    
-        /* Chart Styling */
-        .stLineChart, .stBarChart {
-            filter: invert(0.8) hue-rotate(180deg);
-        }
-    
-        /* Expander */
-        .stExpander {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-        }
-    
-        /* Footer */
         footer {
             background-color: #1e1e1e;
             color: #b0b0b0;
@@ -675,355 +712,303 @@ if selected == "Portfolio Analysis and News":
             left: 0;
             border-top: 1px solid #333;
         }
-    
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-    
-        ::-webkit-scrollbar-track {
-            background: #1a1a1a; 
-        }
-    
-        ::-webkit-scrollbar-thumb {
-            background: #4CAF50; 
-            border-radius: 5px;
-        }
-    
-        ::-webkit-scrollbar-thumb:hover {
-            background: #45a049; 
-        }
-    
-        /* Responsive Adjustments */
-        @media (max-width: 600px) {
-            .metric-box {
-                margin-bottom: 10px;
-            }
-        }
         </style>
     """, unsafe_allow_html=True)
     
+    # Authentication
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+        st.session_state.username = None
+        st.session_state.portfolio = []
     
-    
-    
-    
-    
-    
-    # Header
-    st.markdown("---")
-    
-    st.markdown("""
-        <div class="header">
-            <h1>Welcome to Your Stock Portfolio</h1>
-            <p class="header-text">Track, analyze, and stay updated with your Indian stock investments—all in one place.</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    
-    
-    # Main navigation with only two options
-    selected = option_menu(
-        menu_title=None,
-        options=["Portfolio Analysis", "News"],
-        default_index=0,
-        orientation="horizontal",
-    )
-
-    st.markdown("---")
-    
-    # Timeframe options mapping
-    TIMEFRAME_OPTIONS = {
-        "1 Month": "30d",
-        "3 Months": "3mo",
-        "6 Months": "6mo", 
-        "1 Year": "1y",
-        "Year to Date": "ytd"
-    }
-    
-    # Sidebar for portfolio input
-    with st.sidebar:
-        st.header("Add Your Stocks")
-        ticker = st.text_input("Stock Ticker (e.g., RELIANCE.NS)", "")
-        shares = st.number_input("Shares", min_value=1, value=1)
-        buy_price = st.number_input("Buy Price (INR)", min_value=0.0, value=0.0)
-    
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Add Stock"):
-                if ticker and shares and buy_price:
-                    if "portfolio" not in st.session_state:
-                        st.session_state.portfolio = []
-    
-                    ticker_upper = ticker.upper()
-                    existing_stock = next((stock for stock in st.session_state.portfolio if stock["Ticker"] == ticker_upper), None)
-                    if existing_stock:
-                        old_shares = existing_stock["Shares"]
-                        old_cost = old_shares * existing_stock["Buy Price"]
-                        new_cost = shares * buy_price
-                        total_shares = old_shares + shares
-                        new_avg_buy_price = (old_cost + new_cost) / total_shares
-                        
-                        existing_stock["Shares"] = total_shares
-                        existing_stock["Buy Price"] = new_avg_buy_price
-                        st.success(f"Updated {ticker_upper}!")
-                    else:
-                        st.session_state.portfolio.append({
-                            "Ticker": ticker_upper,
-                            "Shares": shares,
-                            "Buy Price": buy_price
-                        })
-                        st.success(f"Added {ticker_upper}!")
-        with col2:
-            if st.button("Clear Portfolio", key="clear"):
-                st.session_state.portfolio = []
-                st.success("Portfolio cleared!")
-    
-        st.markdown("---")
+    if not st.session_state.logged_in:
+        st.header("Login / Register")
+        auth_choice = st.radio("Choose an option", ["Login", "Register"])
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        
+        if auth_choice == "Login":
+            if st.button("Login"):
+                if login_user(username, password):
+                    st.session_state.logged_in = True
+                    st.session_state.username = username
+                    st.session_state.portfolio = load_portfolio(username)
+                    st.success("Logged in successfully!")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials")
+        else:
+            if st.button("Register"):
+                if register_user(username, password):
+                    st.success("Registered successfully! Please login.")
+                else:
+                    st.error("Username already exists")
+    else:
+        # Header
         st.markdown("""
-            ### How to Use
-            - Enter a ticker (e.g., RELIANCE.NS).
-            - Add shares and buy price.
-            - Click 'Add Stock' or 'Clear Portfolio'.
+            <div class="header">
+                <h1>Welcome to Your Stock Portfolio</h1>
+                <p class="header-text">Track, analyze, and stay updated with your Indian stock investments—all in one place.</p>
+            </div>
         """, unsafe_allow_html=True)
     
-    # Page content
-    if selected == "Portfolio Analysis":
-        if "portfolio" not in st.session_state or not st.session_state.portfolio:
-            st.markdown("<div class='card'>Add stocks in the sidebar to see your portfolio analysis!</div>", unsafe_allow_html=True)
-        else:
-            
-            
-            st.header("Portfolio Analysis")
-
-            st.markdown("---")
-            
-            # Timeframe selection
-            selected_timeframe = st.selectbox(
-                "Select Portfolio Analysis Timeframe", 
-                list(TIMEFRAME_OPTIONS.keys()),
-                index=0
-            )
-
-            st.markdown("---")
-            
-            # Fetch data based on selected timeframe
-            nifty_data = yf.Ticker("^NSEI").history(period=TIMEFRAME_OPTIONS[selected_timeframe])
-            nifty_close = nifty_data["Close"]
-            nifty_return = (nifty_close[-1] / nifty_close[0] - 1) * 100
-            
-            # CAPM parameters
-            risk_free_rate = 0.06  # 6% annual risk-free rate (approximate for India)
-            market_return = nifty_return / 100  # Convert to decimal
-            
-            # For normalized chart and portfolio returns
-            normalized_data = pd.DataFrame()
-            portfolio_value_history = pd.Series(0, index=nifty_close.index)
-            
-            portfolio_data = []
-            
-            for stock in st.session_state.portfolio:
-                try:
-                    ticker_obj = yf.Ticker(stock["Ticker"])
-                    history_1d = ticker_obj.history(period="1d")
-                    history_timeframe = ticker_obj.history(period=TIMEFRAME_OPTIONS[selected_timeframe])
-                    current_price = history_1d["Close"].iloc[-1]
-                    total_value = current_price * stock["Shares"]
-                    profit_loss = (current_price - stock["Buy Price"]) * stock["Shares"]
-                    info = ticker_obj.info
+        # Main navigation
+        selected = option_menu(
+            menu_title=None,
+            options=["Portfolio Analysis", "News"],
+            default_index=0,
+            orientation="horizontal",
+        )
     
-                    beta = info.get("beta", 0)
-                    # CAPM expected return
-                    capm_expected_return = risk_free_rate + beta * (market_return - risk_free_rate)
-                    
-                    div_yield = info.get("dividendYield", 0) * 100 if info.get("dividendYield") else 0
-                    intraday_vol = ((history_1d["High"].iloc[-1] - history_1d["Low"].iloc[-1]) / current_price) * 100
-                    stock_return_timeframe = (history_timeframe["Close"].iloc[-1] / history_timeframe["Close"].iloc[0] - 1) * 100
-                    rel_strength = stock_return_timeframe - nifty_return
-                    days_to_breakeven = abs(profit_loss / (history_timeframe["Close"].diff().mean() * stock["Shares"])) if profit_loss < 0 else 0
+        TIMEFRAME_OPTIONS = {
+            "1 Month": "30d",
+            "3 Months": "3mo",
+            "6 Months": "6mo", 
+            "1 Year": "1y",
+            "Year to Date": "ytd"
+        }
     
-                    sector = {"RELIANCE.NS": "Energy", "TCS.NS": "IT", "HDFCBANK.NS": "Banking",
-                              "INFY.NS": "IT", "SBIN.NS": "Banking"}.get(stock["Ticker"], "Unknown")
+        # Sidebar with Logout at the top
+        with st.sidebar:
+            if st.button("Logout"):
+                st.session_state.logged_in = False
+                st.session_state.username = None
+                st.session_state.portfolio = []
+                st.rerun()
     
-                    portfolio_data.append({
-                        "Ticker": stock["Ticker"],
-                        "Shares": stock["Shares"],
-                        "Buy Price (INR)": round(stock["Buy Price"], 2),
-                        "Current Price (INR)": round(current_price, 2),
-                        "Total Value (INR)": round(total_value, 2),
-                        "Profit/Loss (INR)": round(profit_loss, 2),
-                        "Beta": round(beta, 2),
-                        "CAPM Exp Return (%)": round(capm_expected_return * 100, 2),
-                        "Div Yield (%)": round(div_yield, 2),
-                        "Intraday Vol (%)": round(intraday_vol, 2),
-                        "Rel Strength vs Nifty (%)": round(rel_strength, 2),
-                        "Days to Breakeven": int(days_to_breakeven) if days_to_breakeven > 0 else "N/A",
-                        "Sector": sector
-                    })
+            st.header(f"Portfolio for {st.session_state.username}")
+            ticker = st.text_input("Stock Ticker (e.g., RELIANCE.NS)", "")
+            shares = st.number_input("Shares", min_value=1, value=1)
+            buy_price = st.number_input("Buy Price (INR)", min_value=0.0, value=0.0)
     
-                    # Add normalized price data for individual stocks
-                    normalized_prices = (history_timeframe["Close"] / history_timeframe["Close"].iloc[0]) * 100
-                    normalized_data[stock["Ticker"]] = normalized_prices
-                    
-                    # Calculate portfolio value history
-                    portfolio_value_history += history_timeframe["Close"] * stock["Shares"]
-    
-                except Exception as e:
-                    st.error(f"Error with {stock['Ticker']}: {e}")
-    
-            
-            
-            # Portfolio table
-            df = pd.DataFrame(portfolio_data)
-            st.dataframe(df.style.format({
-                "Buy Price (INR)": "₹{:.2f}", "Current Price (INR)": "₹{:.2f}", 
-                "Total Value (INR)": "₹{:.2f}", "Profit/Loss (INR)": "₹{:.2f}",
-                "Beta": "{:.2f}", "CAPM Exp Return (%)": "{:.2f}", 
-                "Div Yield (%)": "{:.2f}", "Intraday Vol (%)": "{:.2f}",
-                "Rel Strength vs Nifty (%)": "{:.2f}", "Days to Breakeven": "{}"
-            }), use_container_width=True)
-
-            st.markdown("---")
-    
-            # Summary
-            st.subheader("Portfolio Summary")
-            total_investment = sum(stock["Shares"] * stock["Buy Price"] for stock in st.session_state.portfolio)
-            total_value_sum = df["Total Value (INR)"].sum()
-            total_pl_sum = df["Profit/Loss (INR)"].sum()
-            percent_pl = (total_pl_sum / total_investment) * 100 if total_investment > 0 else 0
-            portfolio_beta = np.average(df["Beta"], weights=df["Total Value (INR)"]) if total_value_sum > 0 else 0
-            portfolio_capm = np.average(df["CAPM Exp Return (%)"], weights=df["Total Value (INR)"]) if total_value_sum > 0 else 0
-            div_yield_contrib = sum(df["Div Yield (%)"] * df["Total Value (INR)"]) / total_value_sum if total_value_sum > 0 else 0
-    
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
             with col1:
-                st.markdown(f"<div class='metric-box'><b>Total Investment</b><br>₹{total_investment:,.2f}</div>", unsafe_allow_html=True)
-            with col2:
-                st.markdown(f"<div class='metric-box'><b>Total Value</b><br>₹{total_value_sum:,.2f}</div>", unsafe_allow_html=True)
-            with col3:
-                pl_class = "gain" if total_pl_sum >= 0 else "loss"
-                st.markdown(f"<div class='metric-box'><b>Profit/Loss</b><br><span class='{pl_class}'>₹{total_pl_sum:,.2f} ({percent_pl:.2f}%)</span></div>", unsafe_allow_html=True)
-    
-            col4, col5, col6 = st.columns(3)
-            with col4:
-                st.markdown(f"<div class='metric-box'><b>Portfolio Beta</b><br>{portfolio_beta:.2f}</div>", unsafe_allow_html=True)
-            with col5:
-                st.markdown(f"<div class='metric-box'><b>Portfolio CAPM Return</b><br>{portfolio_capm:.2f}%</div>", unsafe_allow_html=True)
-            with col6:
-                st.markdown(f"<div class='metric-box'><b>Div Yield Contribution</b><br>{div_yield_contrib:.2f}%</div>", unsafe_allow_html=True)
-    
-            st.markdown("---")
-            
-            # Portfolio vs Nifty 50 Comparison
-            st.subheader("Portfolio vs Nifty 50 Comparison")
-            portfolio_normalized = (portfolio_value_history / portfolio_value_history.iloc[0]) * 100
-            nifty_normalized = (nifty_close / nifty_close.iloc[0]) * 100
-            
-            # Combine for chart
-            comparison_data = pd.DataFrame({
-                "Portfolio": portfolio_normalized,
-                "Nifty 50": nifty_normalized
-            })
-            st.line_chart(comparison_data, use_container_width=True)
-    
-            # Calculate comparison metrics
-            portfolio_returns = portfolio_value_history.pct_change().dropna()
-            nifty_returns = nifty_close.pct_change().dropna()
-            portfolio_total_return = (portfolio_value_history[-1] / portfolio_value_history[0] - 1) * 100
-            tracking_error = (portfolio_returns - nifty_returns).std() * 100  # Daily tracking error in percentage
-            correlation = portfolio_returns.corr(nifty_returns)
-    
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                return_class = "gain" if portfolio_total_return >= nifty_return else "loss"
-                st.markdown(f"<div class='metric-box'><b>Portfolio Return</b><br><span class='{return_class}'>{portfolio_total_return:.2f}%</span></div>", unsafe_allow_html=True)
-            with col2:
-                st.markdown(f"<div class='metric-box'><b>Tracking Error</b><br>{tracking_error:.2f}%</div>", unsafe_allow_html=True)
-            with col3:
-                st.markdown(f"<div class='metric-box'><b>Correlation with Nifty</b><br>{correlation:.2f}</div>", unsafe_allow_html=True)
-    
-            st.markdown("---")
-            
-            # Normalized Price Chart for individual stocks
-            st.subheader("Normalized Price Performance")
-            st.line_chart(normalized_data, use_container_width=True)
-    
-            st.markdown("---")        
-    
-            # Profit/Loss Chart
-            st.subheader("Profit/Loss by Stock")
-            st.bar_chart(df.set_index("Ticker")["Profit/Loss (INR)"], use_container_width=True)
-    
-            
-    
-    # News section modification
-    # News section with enhanced styling
-    elif selected == "News":
-        if "portfolio" not in st.session_state or not st.session_state.portfolio:
-            st.markdown("<div class='card'>Add stocks in the sidebar to see news!</div>", unsafe_allow_html=True)
-        else:
-            st.header("Stock News")
-            for stock in st.session_state.portfolio:
-                with st.expander(f"{stock['Ticker']} News", expanded=False):
-                    try:
-                        url = f"https://www.moneycontrol.com/news/tags/{stock['Ticker'].replace('.NS', '')}.html"
-                        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                        soup = BeautifulSoup(response.text, "html.parser")
-                        news_items = soup.find_all("li", class_="clearfix")[:3]
-                        
-                        if news_items:
-                            st.markdown("""
-                            <style>
-                            .news-item {
-                                background-color: #1e1e1e;
-                                border: 1px solid #333;
-                                border-radius: 8px;
-                                padding: 15px;
-                                margin-bottom: 10px;
-                                transition: background-color 0.3s ease;
-                            }
-                            .news-item:hover {
-                                background-color: #2a2a2a;
-                            }
-                            .news-link {
-                                color: #4CAF50;
-                                text-decoration: none;
-                                font-weight: bold;
-                            }
-                            .news-link:hover {
-                                color: #45a049;
-                                text-decoration: underline;
-                            }
-                            </style>
-                            """, unsafe_allow_html=True)
-                            
-                            for item in news_items:
-                                title_elem = item.find("h2")
-                                title = title_elem.text.strip()
-                                link_elem = title_elem.find("a")
-                                link = link_elem['href'] if link_elem and 'href' in link_elem.attrs else url
-                                
-                                # Create styled news item
-                                st.markdown(f"""
-                                <div class="news-item">
-                                    <a href="{link}" class="news-link" target="_blank">{title}</a>
-                                    <br>
-                                    <small style="color: #888;">Read on Moneycontrol</small>
-                                </div>
-                                """, unsafe_allow_html=True)
+                if st.button("Add Stock"):
+                    if ticker and shares and buy_price:
+                        ticker_upper = ticker.upper()
+                        existing_stock = next((stock for stock in st.session_state.portfolio if stock["Ticker"] == ticker_upper), None)
+                        if existing_stock:
+                            old_shares = existing_stock["Shares"]
+                            old_cost = old_shares * existing_stock["Buy Price"]
+                            new_cost = shares * buy_price
+                            total_shares = old_shares + shares
+                            new_avg_buy_price = (old_cost + new_cost) / total_shares
+                            existing_stock["Shares"] = total_shares
+                            existing_stock["Buy Price"] = new_avg_buy_price
+                            st.success(f"Updated {ticker_upper}!")
                         else:
-                            st.markdown(f"""
-                            <div style="background-color: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 15px; color: #888;">
-                                No recent news available for {stock['Ticker']}.
-                            </div>
-                            """, unsafe_allow_html=True)
-                    except Exception as e:
-                        st.markdown(f"""
-                        <div style="background-color: #2a2a2a; border: 1px solid #444; border-radius: 8px; padding: 15px; color: #F44336;">
-                            Error fetching news for {stock['Ticker']}: {str(e)}
-                        </div>
-                        """, unsafe_allow_html=True)
+                            st.session_state.portfolio.append({
+                                "Ticker": ticker_upper,
+                                "Shares": shares,
+                                "Buy Price": buy_price
+                            })
+                            st.success(f"Added {ticker_upper}!")
+                        save_portfolio(st.session_state.username, st.session_state.portfolio)
+            with col2:
+                if st.button("Clear Portfolio", key="clear"):
+                    st.session_state.portfolio = []
+                    save_portfolio(st.session_state.username, st.session_state.portfolio)
+                    st.success("Portfolio cleared!")
     
-    # Footer
-    st.markdown(f"<footer>App running on {pd.Timestamp.now().strftime('%B %d, %Y')}</footer>", unsafe_allow_html=True)
-     
+            st.markdown("---")
+            st.markdown("""
+                ### How to Use
+                - Enter a ticker (e.g., RELIANCE.NS).
+                - Add shares and buy price.
+                - Click 'Add Stock' or 'Clear Portfolio'.
+            """, unsafe_allow_html=True)
+    
+        # Portfolio Analysis
+        if selected == "Portfolio Analysis":
+            if not st.session_state.portfolio:
+                st.markdown("<div>Add stocks in the sidebar to see your portfolio analysis!</div>", unsafe_allow_html=True)
+            else:
+                st.header("Portfolio Analysis")
+                selected_timeframe = st.selectbox("Select Timeframe", list(TIMEFRAME_OPTIONS.keys()), index=0)
+                
+                nifty_data = yf.Ticker("^NSEI").history(period=TIMEFRAME_OPTIONS[selected_timeframe])
+                nifty_close = nifty_data["Close"]
+                nifty_return = (nifty_close[-1] / nifty_close[0] - 1) * 100
+                
+                risk_free_rate = 0.06
+                market_return = nifty_return / 100
+                normalized_data = pd.DataFrame()
+                portfolio_value_history = pd.Series(0, index=nifty_close.index)
+                portfolio_data = []
+    
+                for stock in st.session_state.portfolio:
+                    try:
+                        ticker_obj = yf.Ticker(stock["Ticker"])
+                        history_1d = ticker_obj.history(period="1d")
+                        history_timeframe = ticker_obj.history(period=TIMEFRAME_OPTIONS[selected_timeframe])
+                        current_price = history_1d["Close"].iloc[-1]
+                        total_value = current_price * stock["Shares"]
+                        profit_loss = (current_price - stock["Buy Price"]) * stock["Shares"]
+                        info = ticker_obj.info
+    
+                        beta = info.get("beta", 0)
+                        capm_expected_return = risk_free_rate + beta * (market_return - risk_free_rate)
+                        div_yield = info.get("dividendYield", 0) * 100 if info.get("dividendYield") else 0
+                        intraday_vol = ((history_1d["High"].iloc[-1] - history_1d["Low"].iloc[-1]) / current_price) * 100
+                        stock_return_timeframe = (history_timeframe["Close"].iloc[-1] / history_timeframe["Close"].iloc[0] - 1) * 100
+                        rel_strength = stock_return_timeframe - nifty_return
+                        days_to_breakeven = abs(profit_loss / (history_timeframe["Close"].diff().mean() * stock["Shares"])) if profit_loss < 0 else 0
+    
+                        sector = {"RELIANCE.NS": "Energy", "TCS.NS": "IT", "HDFCBANK.NS": "Banking",
+                                  "INFY.NS": "IT", "SBIN.NS": "Banking"}.get(stock["Ticker"], "Unknown")
+    
+                        portfolio_data.append({
+                            "Ticker": stock["Ticker"],
+                            "Shares": stock["Shares"],
+                            "Buy Price (INR)": round(stock["Buy Price"], 2),
+                            "Current Price (INR)": round(current_price, 2),
+                            "Total Value (INR)": round(total_value, 2),
+                            "Profit/Loss (INR)": round(profit_loss, 2),
+                            "Beta": round(beta, 2),
+                            "CAPM Exp Return (%)": round(capm_expected_return * 100, 2),
+                            "Div Yield (%)": round(div_yield, 2),
+                            "Intraday Vol (%)": round(intraday_vol, 2),
+                            "Rel Strength vs Nifty (%)": round(rel_strength, 2),
+                            "Days to Breakeven": int(days_to_breakeven) if days_to_breakeven > 0 else "N/A",
+                            "Sector": sector
+                        })
+    
+                        normalized_prices = (history_timeframe["Close"] / history_timeframe["Close"].iloc[0]) * 100
+                        normalized_data[stock["Ticker"]] = normalized_prices
+                        portfolio_value_history += history_timeframe["Close"] * stock["Shares"]
+    
+                    except Exception as e:
+                        st.error(f"Error with {stock['Ticker']}: {e}")
+    
+                df = pd.DataFrame(portfolio_data)
+                st.dataframe(df.style.format({
+                    "Buy Price (INR)": "₹{:.2f}", "Current Price (INR)": "₹{:.2f}", 
+                    "Total Value (INR)": "₹{:.2f}", "Profit/Loss (INR)": "₹{:.2f}",
+                    "Beta": "{:.2f}", "CAPM Exp Return (%)": "{:.2f}", 
+                    "Div Yield (%)": "{:.2f}", "Intraday Vol (%)": "{:.2f}",
+                    "Rel Strength vs Nifty (%)": "{:.2f}", "Days to Breakeven": "{}"
+                }), use_container_width=True)
+    
+                # Gemini AI Analysis
+                st.subheader("AI-Powered Portfolio Insights (Powered by Gemini)")
+                gemini_analysis = get_gemini_portfolio_analysis(df)
+                st.markdown(gemini_analysis)
+    
+                st.subheader("Portfolio Summary")
+                total_investment = sum(stock["Shares"] * stock["Buy Price"] for stock in st.session_state.portfolio)
+                total_value_sum = df["Total Value (INR)"].sum()
+                total_pl_sum = df["Profit/Loss (INR)"].sum()
+                percent_pl = (total_pl_sum / total_investment) * 100 if total_investment > 0 else 0
+                portfolio_beta = np.average(df["Beta"], weights=df["Total Value (INR)"]) if total_value_sum > 0 else 0
+                portfolio_capm = np.average(df["CAPM Exp Return (%)"], weights=df["Total Value (INR)"]) if total_value_sum > 0 else 0
+                div_yield_contrib = sum(df["Div Yield (%)"] * df["Total Value (INR)"]) / total_value_sum if total_value_sum > 0 else 0
+    
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown(f"<div class='metric-box'><b>Total Investment</b><br>₹{total_investment:,.2f}</div>", unsafe_allow_html=True)
+                with col2:
+                    st.markdown(f"<div class='metric-box'><b>Total Value</b><br>₹{total_value_sum:,.2f}</div>", unsafe_allow_html=True)
+                with col3:
+                    pl_class = "gain" if total_pl_sum >= 0 else "loss"
+                    st.markdown(f"<div class='metric-box'><b>Profit/Loss</b><br><span class='{pl_class}'>₹{total_pl_sum:,.2f} ({percent_pl:.2f}%)</span></div>", unsafe_allow_html=True)
+    
+                col4, col5, col6 = st.columns(3)
+                with col4:
+                    st.markdown(f"<div class='metric-box'><b>Portfolio Beta</b><br>{portfolio_beta:.2f}</div>", unsafe_allow_html=True)
+                with col5:
+                    st.markdown(f"<div class='metric-box'><b>Portfolio CAPM Return</b><br>{portfolio_capm:.2f}%</div>", unsafe_allow_html=True)
+                with col6:
+                    st.markdown(f"<div class='metric-box'><b>Div Yield Contribution</b><br>{div_yield_contrib:.2f}%</div>", unsafe_allow_html=True)
+    
+                st.subheader("Portfolio vs Nifty 50 Comparison")
+                portfolio_normalized = (portfolio_value_history / portfolio_value_history.iloc[0]) * 100
+                nifty_normalized = (nifty_close / nifty_close.iloc[0]) * 100
+                comparison_data = pd.DataFrame({"Portfolio": portfolio_normalized, "Nifty 50": nifty_normalized})
+                st.line_chart(comparison_data, use_container_width=True)
+    
+                portfolio_returns = portfolio_value_history.pct_change().dropna()
+                nifty_returns = nifty_close.pct_change().dropna()
+                portfolio_total_return = (portfolio_value_history[-1] / portfolio_value_history[0] - 1) * 100
+                tracking_error = (portfolio_returns - nifty_returns).std() * 100
+                correlation = portfolio_returns.corr(nifty_returns)
+    
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    return_class = "gain" if portfolio_total_return >= nifty_return else "loss"
+                    st.markdown(f"<div class='metric-box'><b>Portfolio Return</b><br><span class='{return_class}'>{portfolio_total_return:.2f}%</span></div>", unsafe_allow_html=True)
+                with col2:
+                    st.markdown(f"<div class='metric-box'><b>Tracking Error</b><br>{tracking_error:.2f}%</div>", unsafe_allow_html=True)
+                with col3:
+                    st.markdown(f"<div class='metric-box'><b>Correlation with Nifty</b><br>{correlation:.2f}</div>", unsafe_allow_html=True)
+    
+                st.subheader("Normalized Price Performance")
+                st.line_chart(normalized_data, use_container_width=True)
+    
+                st.subheader("Profit/Loss by Stock")
+                st.bar_chart(df.set_index("Ticker")["Profit/Loss (INR)"], use_container_width=True)
+    
+                csv = df.to_csv(index=False)
+                b64 = base64.b64encode(csv.encode()).decode()
+                st.markdown(f'<a href="data:file/csv;base64,{b64}" download="portfolio.csv"><button>Download Portfolio</button></a>', unsafe_allow_html=True)
+    
+        # News Section
+        elif selected == "News":
+            if not st.session_state.portfolio:
+                st.markdown("<div>Add stocks in the sidebar to see news!</div>", unsafe_allow_html=True)
+            else:
+                st.header("Stock News")
+                for stock in st.session_state.portfolio:
+                    with st.expander(f"{stock['Ticker']} News", expanded=False):
+                        try:
+                            url = f"https://www.moneycontrol.com/news/tags/{stock['Ticker'].replace('.NS', '')}.html"
+                            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                            soup = BeautifulSoup(response.text, "html.parser")
+                            news_items = soup.find_all("li", class_="clearfix")[:3]
+                            
+                            if news_items:
+                                st.markdown("""
+                                <style>
+                                .news-item {
+                                    background-color: #1e1e1e;
+                                    border: 1px solid #333;
+                                    border-radius: 8px;
+                                    padding: 15px;
+                                    margin-bottom: 10px;
+                                    transition: background-color 0.3s ease;
+                                }
+                                .news-item:hover {
+                                    background-color: #2a2a2a;
+                                }
+                                .news-link {
+                                    color: #4CAF50;
+                                    text-decoration: none;
+                                    font-weight: bold;
+                                }
+                                .news-link:hover {
+                                    color: #45a049;
+                                    text-decoration: underline;
+                                }
+                                </style>
+                                """, unsafe_allow_html=True)
+                                
+                                for item in news_items:
+                                    title_elem = item.find("h2")
+                                    title = title_elem.text.strip()
+                                    link_elem = title_elem.find("a")
+                                    link = link_elem['href'] if link_elem and 'href' in link_elem.attrs else url
+                                    st.markdown(f"""
+                                    <div class="news-item">
+                                        <a href="{link}" class="news-link" target="_blank">{title}</a>
+                                        <br>
+                                        <small style="color: #888;">Read on Moneycontrol</small>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            else:
+                                st.markdown(f"<div style='background-color: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 15px; color: #888;'>No recent news available for {stock['Ticker']}.</div>", unsafe_allow_html=True)
+                        except Exception as e:
+                            st.markdown(f"<div style='background-color: #2a2a2a; border: 1px solid #444; border-radius: 8px; padding: 15px; color: #F44336;'>Error fetching news for {stock['Ticker']}: {str(e)}</div>", unsafe_allow_html=True)
+    
+        # Footer
+        st.markdown(f"<footer>App running on {pd.Timestamp.now().strftime('%B %d, %Y')}</footer>", unsafe_allow_html=True)
+    
     
