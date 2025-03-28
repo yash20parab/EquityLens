@@ -13,4 +13,3 @@ feedparser
 bs4
 google-generativeai
 supabase
-hashlib
