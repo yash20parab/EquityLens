@@ -416,7 +416,7 @@ if selected == "Home":
 
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        stock_symbol = st.text_input("🔍Enter stock symbol (Example:TATACHEM.NS)", "").upper()
+        stock_symbol = st.selectbox("🔍Enter stock symbol (Example:TATACHEM.NS)",[""] + stock_symbols,help="Select a stock symbol from the list").upper()
 
     if stock_symbol:
         analyze_stock(stock_symbol)
