@@ -50,10 +50,7 @@ if selected == "Home":
     
     
     # Header section
-    col1, col2, col3 = st.columns([1,3,1])
-    with col2:
-        
-        st.header("Stock Fundamental & Technical values")
+    st.markdown("<h1 style='text-align: center;'>Stock Fundamenatal & Technical values</h1>", unsafe_allow_html=True)
 
     st.markdown("---")
 
