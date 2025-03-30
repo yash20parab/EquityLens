@@ -766,6 +766,7 @@ if selected == "Portfolio Analysis and News":
         selected = option_menu(
             menu_title=None,
             options=["Portfolio Analysis", "News"],
+            icons=["briefcase","newspaper"],
             default_index=0,
             orientation="horizontal",
         )
