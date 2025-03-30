@@ -21,7 +21,7 @@ import os
 from bs4 import BeautifulSoup
 
 # Streamlit app layout
-st.set_page_config(page_title="EquityLens", layout="wide")
+st.set_page_config(page_title="EquityLens",page_icon="logo.png", layout="wide")
 st.title("EquityLens")
 
 # Load stock list from CSV
