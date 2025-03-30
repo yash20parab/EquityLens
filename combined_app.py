@@ -20,6 +20,10 @@ from supabase import create_client, Client
 import os
 from bs4 import BeautifulSoup
 
+# Streamlit app layout
+st.set_page_config(page_title="EquityLens", layout="wide")
+st.title("EquityLens")
+
 # Load stock list from CSV
 @st.cache_data
 def load_stock_list():
@@ -28,9 +32,7 @@ def load_stock_list():
     
 stock_symbols = load_stock_list()
 
-# Streamlit app layout
-st.set_page_config(page_title="EquityLens", layout="wide")
-st.title("EquityLens")
+
 
 # Navigation
 
