@@ -491,9 +491,7 @@ if selected == "Market Status":
     def main():
         st.markdown("---")
         
-        col1, col2, col3 = st.columns([1,3,1])
-        with col2:
-            st.header("Stock Fundamental & Technical values")
+        st.markdown("<h2 style='text-align: center;'>Markets at a glance (NIFTY-50 heatmap)</h2>", unsafe_allow_html=True)
         
         default_symbols = ['TATASTEEL', 'NTPC', 'WIPRO', 'ITC', 'RELIANCE', 'SHRIRAMFIN', 'ONGC', 
                         'COALINDIA', 'BHARTIARTL', 'INDUSINDBK', 'HINDALCO', 'KOTAKBANK', 
