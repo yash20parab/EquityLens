@@ -28,7 +28,7 @@ st.set_page_config(page_title="EquityLens",page_icon=icon ,layout="wide")
 st.markdown(
     """
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
-    <h1 style="font-family: 'Roboto', sans-serif; font-weight: 700; color: #FFFFFF; padding: 10px; text-align: left;font-size: 52px;">
+    <h1 style="font-family: 'Roboto', sans-serif; font-weight: 700; color: #FFFFFF; padding: 10px; text-align: left;font-size: 60px;">
         EquityLens
     </h1>
     """,
