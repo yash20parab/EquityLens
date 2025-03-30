@@ -28,7 +28,8 @@ st.title("EquityLens")
 
 st.markdown(
     """
-    <h1 style="color: #FFFFFF; background-color: #000000; padding: 10px; text-align: center;">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+    <h1 style="font-family: 'Roboto', sans-serif; font-weight: 700; color: #FFFFFF; background-color: #000000; padding: 10px; text-align: center;">
         My Awesome Website
     </h1>
     """,
