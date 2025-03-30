@@ -50,7 +50,7 @@ if selected == "Home":
     
     
     # Header section
-    st.markdown("<h1 style='text-align: center;'>Stock Fundamenatal & Technical values</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>Stock Fundamenatal & Technical values</h2>", unsafe_allow_html=True)
 
     st.markdown("---")
 
