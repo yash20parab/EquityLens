@@ -767,6 +767,7 @@ if selected == "Portfolio Analysis and News":
         st.session_state.portfolio = []
     
     if not st.session_state.logged_in:
+        st.markdown("<div class='login-container'>", unsafe_allow_html=True)
         st.header("Login / Register")
         auth_choice = st.radio("Choose an option", ["Login", "Register"])
         st.text_input("Username")
@@ -782,14 +783,14 @@ if selected == "Portfolio Analysis and News":
                     st.rerun()
                 else:
                     st.error("Invalid credentials")
-            else:
-                if st.button("Register"):
-                    if register_user(username, password):
-                        st.success("Registered successfully! Please login.")
-                    else:
-                        st.error("Username already exists")
+        else:         
+            if st.button("Register"):               
+                if register_user(username, password):
+                    st.success("Registered successfully! Please login.")
+                else:
+                    st.error("Username already exists")
 
-
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 
