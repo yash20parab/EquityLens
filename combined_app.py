@@ -53,7 +53,7 @@ if selected == "Home":
     col1, col2, col3 = st.columns([1,3,1])
     with col2:
         
-        st.title("Stock Fundamental & Technical values")
+        st.header("Stock Fundamental & Technical values")
 
     st.markdown("---")
 
@@ -491,7 +491,11 @@ if selected == "Market Status":
         return df
 
     def main():
-        st.title("MARKETS AT A GLANCE - Nifty 50 heatmap")
+        st.markdown("---")
+        
+        col1, col2, col3 = st.columns([1,3,1])
+        with col2:
+            st.header("Stock Fundamental & Technical values")
         
         default_symbols = ['TATASTEEL', 'NTPC', 'WIPRO', 'ITC', 'RELIANCE', 'SHRIRAMFIN', 'ONGC', 
                         'COALINDIA', 'BHARTIARTL', 'INDUSINDBK', 'HINDALCO', 'KOTAKBANK', 
@@ -503,7 +507,7 @@ if selected == "Market Status":
                         'ADANIPORTS', 'JSWSTEEL', 'ASIANPAINT', 'BEL', 'TECHM', 'GRASIM', 
                         'EICHERMOT', 'BPCL', 'DRREDDY']
 
-        with st.spinner("Fetching data from Yahoo Finance..."):
+        with st.spinner("Loading heatmap..."):
             df = fetch_yfinance_data(tuple(default_symbols))
             valid_df = df[df['Sector'] != 'Error']
             valid_df = valid_df[valid_df['MarketCap'] > 0]
@@ -760,7 +764,7 @@ if selected == "Portfolio Analysis and News":
         # Header
         st.markdown("""
             <div class="header">
-                <h1>Welcome to Your Stock Portfolio</h1>
+                <h1>Welcome to Your Stock Portfolio</h2>
                 <p class="header-text">Track, analyze, and stay updated with your Indian stock investments—all in one place.</p>
             </div>
         """, unsafe_allow_html=True)
