@@ -536,14 +536,17 @@ if selected == "Market Status":
 
             fig.update_traces(
                 texttemplate="%{label}<br>M Cap: ₹%{customdata[0]:,.1f} Cr<br>Change: %{customdata[1]:+.2f}%<br>Price: ₹%{customdata[2]:,.1f}",
-                hovertemplate="%{label}<br>Market Cap: ₹%{customdata[0]:,.1f} Cr<br>Price Change: %{customdata[1]:+.2f}%<br>Last Price: ₹%{customdata[2]:,.1f}<extra></extra>"
+                hovertemplate="%{label}<br>Market Cap: ₹%{customdata[0]:,.1f} Cr<br>Price Change: %{customdata[1]:+.2f}%<br>Last Price: ₹%{customdata[2]:,.1f}<extra></extra>",
+                textfont_size=18,
+                hoverlabel=dict(font_size=18  # Increases the font size of the hover text
+            )
             )
 
             fig.update_layout(
                 margin=dict(t=50, l=0, r=0, b=0),
                 coloraxis_colorbar=dict(
                     title="Price Change (%)",
-                    tickprefix="+",
+                    tickprefix="",
                     ticksuffix="%"
                 ),
                 autosize=True
