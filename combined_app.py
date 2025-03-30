@@ -846,6 +846,30 @@ if selected == "Portfolio Analysis and News":
                     st.session_state.portfolio = []
                     save_portfolio(st.session_state.username, st.session_state.portfolio)
                     st.success("Portfolio cleared!")
+
+            st.markdown("---")
+            st.subheader("Remove Stock")
+            remove_ticker = st.selectbox("Select Stock to Remove", [""] + [stock["Ticker"] for stock in st.session_state.portfolio], key="remove_ticker")
+            remove_shares = st.number_input("Shares to Remove", min_value=1, value=1, key="remove_shares")
+            
+            if st.button("Remove Stock", key="remove_stock"):
+                if remove_ticker:
+                    existing_stock = next((stock for stock in st.session_state.portfolio if stock["Ticker"] == remove_ticker), None)
+                    if existing_stock:
+                        if existing_stock["Shares"] >= remove_shares:
+                            existing_stock["Shares"] -= remove_shares
+                            if existing_stock["Shares"] == 0:
+                                st.session_state.portfolio = [stock for stock in st.session_state.portfolio if stock["Ticker"] != remove_ticker]
+                            save_portfolio(st.session_state.username, st.session_state.portfolio)
+                            st.success(f"Removed {remove_shares} shares of {remove_ticker}!")
+                        else:
+                            st.error(f"Not enough shares! You only have {existing_stock['Shares']} shares of {remove_ticker}.")
+                    else:
+                        st.error(f"Stock {remove_ticker} not found in your portfolio!")
+                else:
+                    st.error("Please select a stock to remove!")
+            
+            
     
             st.markdown("---")
             st.markdown("""
