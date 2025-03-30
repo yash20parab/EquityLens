@@ -725,16 +725,20 @@ if selected == "Portfolio Analysis and News":
             left: 0;
             border-top: 1px solid #333;
         }
+        /* Center the login box */
         .login-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 350px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .login-box {
             background-color: #1e1e1e;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.2);
+            width: 350px;
             text-align: center;
             border: 1px solid #333;
         }
@@ -754,25 +758,21 @@ if selected == "Portfolio Analysis and News":
             border-radius: 5px;
             width: 100%;
         }
-    
+        
         </style>
     """, unsafe_allow_html=True)
-
     
+    # Center the login container using columns
+    col1, col2, col3 = st.columns([1, 2, 1])
     
-    # Authentication
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
-        st.session_state.username = None
-        st.session_state.portfolio = []
-    
-    if not st.session_state.logged_in:
-        st.markdown("<div class='login-container'>", unsafe_allow_html=True)
+    with col2:
+        st.markdown("<div class='login-container'>", unsafe_allow_html=True)  # Start Login Container
+        st.markdown("<div class='login-box'>", unsafe_allow_html=True)  # Start Login Box
         st.header("Login / Register")
         auth_choice = st.radio("Choose an option", ["Login", "Register"])
-        st.text_input("Username")
+        username = st.text_input("Username")
         password = st.text_input("Password", type="password")
-
+    
         if auth_choice == "Login":
             if st.button("Login"):
                 if login_user(username, password):
@@ -783,14 +783,15 @@ if selected == "Portfolio Analysis and News":
                     st.rerun()
                 else:
                     st.error("Invalid credentials")
-        else:         
-            if st.button("Register"):               
+        else:
+            if st.button("Register"):
                 if register_user(username, password):
                     st.success("Registered successfully! Please login.")
                 else:
                     st.error("Username already exists")
-
-        st.markdown("</div>", unsafe_allow_html=True)
+    
+        st.markdown("</div>", unsafe_allow_html=True)  # End Login Box
+        st.markdown("</div>", unsafe_allow_html=True)  # End Login Container
 
 
 
