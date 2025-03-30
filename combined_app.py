@@ -735,71 +735,33 @@ if selected == "Portfolio Analysis and News":
         st.session_state.portfolio = []
     
     if not st.session_state.logged_in:
-        st.markdown("""
-            <style>
-            /* Centering the form */
-            .login-container {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 90vh;
-            }
-            /* Styling the box */
-            .login-box {
-                background-color: #1e1e1e;
-                padding: 30px;
-                border-radius: 10px;
-                box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.1);
-                width: 350px;
-                text-align: center;
-            }
-            /* Styling input fields */
-            input {
-                background-color: #2a2a2a !important;
-                color: white !important;
-            }
-            /* Style for the buttons */
-            .stButton>button {
-                background-color: #4CAF50 !important;
-                color: white !important;
-                border-radius: 5px;
-                width: 100%;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-        
-        # Login/Register form inside the centered div
-        st.markdown("<div class='login-container'>", unsafe_allow_html=True)
-        
-        with st.container():
-            st.markdown("<div class='login-box'>", unsafe_allow_html=True)
-            
-            st.header("Login / Register")
-            
-            auth_choice = st.radio("Choose an option", ["Login", "Register"])
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            
-            if auth_choice == "Login":
-                if st.button("Login"):
-                    if login_user(username, password):  # Function to verify login
-                        st.session_state.logged_in = True
-                        st.session_state.username = username
-                        st.session_state.portfolio = load_portfolio(username)  # Load portfolio after login
-                        st.success("Logged in successfully!")
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials")
+        st.text_input("Username")
+        password = st.text_input("Password", type="password")
+
+        if auth_choice == "Login":
+            if st.button("Login"):
+                if login_user(username, password):
+                    st.session_state.logged_in = True
+                    st.session_state.username = username
+                    st.session_state.portfolio = load_portfolio(username)
+                    st.success("Logged in successfully!")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials")
             else:
                 if st.button("Register"):
-                    if register_user(username, password):  # Function to register user
+                    if register_user(username, password):
                         st.success("Registered successfully! Please login.")
                     else:
                         st.error("Username already exists")
-        
-            st.markdown("</div>", unsafe_allow_html=True)  # Closing login-box div
-        
-        st.markdown("</div>", unsafe_allow_html=True)  # Closing login-container div
+
+
+
+
+
+
+
+
 
 
 
