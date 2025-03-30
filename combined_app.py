@@ -666,7 +666,7 @@ if selected == "Portfolio Analysis and News":
             margin-bottom: 20px;
             border: 1px solid #333;
         }
-        .header h1 {
+        .header h2 {
             margin-bottom: 10px;
             font-weight: bold;
             color: #4CAF50;
