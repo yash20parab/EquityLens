@@ -47,12 +47,13 @@ selected = option_menu(
 
 if selected == "Home":
     # Home Page Content
-    
+
+    st.markdown("---")
     
     # Header section
     st.markdown("<h2 style='text-align: center;'>Stock Fundamenatal & Technical values</h2>", unsafe_allow_html=True)
 
-    st.markdown("---")
+    
 
 
     def get_symbol(symbol):
