@@ -28,20 +28,9 @@ st.set_page_config(page_title="EquityLens",page_icon=icon ,layout="wide")
 st.markdown(
     """
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
-    <style>
-    .custom-title {
-        font-family: 'Roboto', sans-serif;
-        font-weight: 700;
-        color: #FFFFFF;
-        background-color: #333333;
-        padding: 10px;
-        position: absolute;
-        top: 0;
-        left: 0;
-        margin: 0;
-    }
-    </style>
-    <h1 class="custom-title">EquityLens</h1>
+    <h1 style="font-family: 'Roboto', sans-serif; font-weight: 700; color: #FFFFFF; background-color: #000000; padding: 10px; text-align: left;">
+        EquityLens
+    </h1>
     """,
     unsafe_allow_html=True
 )
