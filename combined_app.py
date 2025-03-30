@@ -39,7 +39,7 @@ stock_symbols = load_stock_list()
 selected = option_menu(
     menu_title=None,
     options=["Home","Market Status","Portfolio Analysis and News"],
-    icons=["house","book","envelope"],
+    icons=[":material/home:","house","envelope"],
     default_index=0,
     orientation="horizontal",
 
