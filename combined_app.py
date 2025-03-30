@@ -760,7 +760,7 @@ if selected == "Portfolio Analysis and News":
         # Header
         st.markdown("""
             <div class="header">
-                <h1>Welcome to Your Stock Portfolio</h2>
+                <h2>Welcome to Your Stock Portfolio</h2>
                 <p class="header-text">Track, analyze, and stay updated with your Indian stock investments—all in one place.</p>
             </div>
         """, unsafe_allow_html=True)
