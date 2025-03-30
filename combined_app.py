@@ -1010,7 +1010,7 @@ if selected == "Portfolio Analysis and News":
                                     color: #c7d3c7 !important;
                                     text-decoration: none !important;
                                     font-weight: bold;
-                                    font-size: 20px;
+                                    font-size: 24px;
                                 }
                                 .news-link:hover {
                                     color: #45a049;
