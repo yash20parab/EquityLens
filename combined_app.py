@@ -35,6 +35,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+st.markdown("---")
+
 # Load stock list from CSV
 @st.cache_data
 def load_stock_list():
