@@ -56,9 +56,9 @@ selected = option_menu(
     default_index=0,
     orientation="horizontal",
     styles={
-        "container": {"padding": "0!important", "font-size": "12px"},
-        "nav-link": {"font-size": "12px", "padding": "4px 8px", "margin": "0 4px"},
-        "icon": {"font-size": "14px"},
+        "container": {"font-size": "18px", "width": "75%"},
+        "nav-link": {"font-size": "18px", "padding": "4px 8px", "margin": "0 4px", "font-weight": "bold"},
+        "icon": {"font-size": "18px"},
     }
 
 )
