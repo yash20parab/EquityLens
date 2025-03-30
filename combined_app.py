@@ -47,26 +47,6 @@ stock_symbols = load_stock_list()
 
 
 
-st.markdown(
-    """
-    <style>
-    /* Target all nav-related elements */
-    div[data-testid="stHorizontalBlock"] .nav {
-        font-size: 12px !important;  /* Smaller text size */
-    }
-    div[data-testid="stHorizontalBlock"] .nav-item .nav-link {
-        padding: 4px 8px !important;  /* Smaller padding */
-        margin: 0 4px !important;     /* Smaller spacing */
-        font-size: 12px !important;   /* Force text size */
-    }
-    div[data-testid="stHorizontalBlock"] .nav-item .nav-link i {
-        font-size: 14px !important;   /* Smaller icon size */
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 
 # Navigation
 selected = option_menu(
@@ -75,6 +55,11 @@ selected = option_menu(
     icons=["house","graph-up-arrow","bar-chart-line"],
     default_index=0,
     orientation="horizontal",
+    styles={
+        "container": {"padding": "0!important", "font-size": "12px"},
+        "nav-link": {"font-size": "12px", "padding": "4px 8px", "margin": "0 4px"},
+        "icon": {"font-size": "14px"},
+    }
 
 )
 
