@@ -20,8 +20,10 @@ from supabase import create_client, Client
 import os
 from bs4 import BeautifulSoup
 
+icon = Image.open("logo.png")
+
 # Streamlit app layout
-st.set_page_config(page_title="EquityLens",page_icon="logo.png", layout="wide")
+st.set_page_config(page_title="EquityLens",page_icon=icon ,layout="wide")
 st.title("EquityLens")
 
 # Load stock list from CSV
