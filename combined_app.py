@@ -1006,8 +1006,8 @@ if selected == "Portfolio Analysis and News":
                                 .news-item:hover {
                                     background-color: #2a2a2a;
                                 }
-                                .news-link {
-                                    color: #4CAF50;
+                                .news-link {                                   
+                                    color: white !important;
                                     text-decoration: none;
                                     font-weight: bold;
                                     font-size: 20px;
