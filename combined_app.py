@@ -47,8 +47,29 @@ stock_symbols = load_stock_list()
 
 
 
-# Navigation
+st.markdown(
+    """
+    <style>
+    /* Target the horizontal option menu container */
+    .nav-pills {
+        font-size: 14px;  /* Smaller text size */
+    }
+    /* Target individual menu items */
+    .nav-pills .nav-link {
+        padding: 5px 10px;  /* Reduce padding (top/bottom, left/right) */
+        margin: 0 5px;      /* Reduce spacing between items */
+    }
+    /* Target icons */
+    .nav-pills .nav-link i {
+        font-size: 16px;    /* Smaller icon size */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+
+# Navigation
 selected = option_menu(
     menu_title=None,
     options=["Home","Market Status","Portfolio Analysis and News"],
