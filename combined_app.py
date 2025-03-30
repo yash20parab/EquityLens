@@ -725,8 +725,40 @@ if selected == "Portfolio Analysis and News":
             left: 0;
             border-top: 1px solid #333;
         }
+        .login-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 350px;
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.2);
+            text-align: center;
+            border: 1px solid #333;
+        }
+        
+        /* Style input fields */
+        .stTextInput>div>div>input, .stPasswordInput>div>div>input {
+            background-color: #2a2a2a !important;
+            color: white !important;
+            border: 1px solid #555 !important;
+            text-align: center;
+        }
+    
+        /* Style buttons */
+        .stButton>button {
+            background-color: #4CAF50 !important;
+            color: white !important;
+            border-radius: 5px;
+            width: 100%;
+        }
+    
         </style>
     """, unsafe_allow_html=True)
+
+    
     
     # Authentication
     if "logged_in" not in st.session_state:
