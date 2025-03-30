@@ -50,21 +50,18 @@ stock_symbols = load_stock_list()
 st.markdown(
     """
     <style>
-    /* Target the horizontal option menu container */
-    .nav-pills {
-        font-size: 14px;  /* Smaller text size */
-        max-width: 100px;
+    /* Target all nav-related elements */
+    div[data-testid="stHorizontalBlock"] .nav {
+        font-size: 12px !important;  /* Smaller text size */
     }
-    /* Target individual menu items */
-    .nav-pills .nav-link {
-        padding: 5px 10px;  /* Reduce padding (top/bottom, left/right) */
-        margin: 0 5px;      /* Reduce spacing between items */
+    div[data-testid="stHorizontalBlock"] .nav-item .nav-link {
+        padding: 4px 8px !important;  /* Smaller padding */
+        margin: 0 4px !important;     /* Smaller spacing */
+        font-size: 12px !important;   /* Force text size */
     }
-    /* Target icons */
-    .nav-pills .nav-link i {
-        font-size: 16px;    /* Smaller icon size */
+    div[data-testid="stHorizontalBlock"] .nav-item .nav-link i {
+        font-size: 14px !important;   /* Smaller icon size */
     }
-    
     </style>
     """,
     unsafe_allow_html=True
