@@ -737,9 +737,9 @@ if selected == "Portfolio Analysis and News":
     if not st.session_state.logged_in:
         st.header("Login / Register")
         auth_choice = st.radio("Choose an option", ["Login", "Register"])
-        st.text_input("Username")
+        username = st.text_input("Username")
         password = st.text_input("Password", type="password")
-
+        
         if auth_choice == "Login":
             if st.button("Login"):
                 if login_user(username, password):
@@ -750,21 +750,12 @@ if selected == "Portfolio Analysis and News":
                     st.rerun()
                 else:
                     st.error("Invalid credentials")
-            else:
-                if st.button("Register"):
-                    if register_user(username, password):
-                        st.success("Registered successfully! Please login.")
-                    else:
-                        st.error("Username already exists")
-
-
-
-
-
-
-
-
-        
+        else:
+            if st.button("Register"):
+                if register_user(username, password):
+                    st.success("Registered successfully! Please login.")
+                else:
+                    st.error("Username already exists")
     else:
         # Header
         st.markdown("""
