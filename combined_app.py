@@ -53,7 +53,7 @@ st.markdown(
     /* Target the horizontal option menu container */
     .nav-pills {
         font-size: 14px;  /* Smaller text size */
-        max-width: 500px;
+        max-width: 100px;
     }
     /* Target individual menu items */
     .nav-pills .nav-link {
