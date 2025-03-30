@@ -255,7 +255,7 @@ if selected == "Home":
 
                 # Comapany Information
                 if 'longBusinessSummary' in info:
-                    with st.expander("About Company"):
+                    with st.expander("About Company",expanded=True):
                         try:
                             
                             st.write(info['longBusinessSummary'])
@@ -263,7 +263,7 @@ if selected == "Home":
                             st.write("Information Not Found.")
 
                 # Technical Analysis Summary
-                with st.expander("Technical Analysis Summary"):
+                with st.expander("Technical Analysis Summary",expanded=True):
                     trend = "Uptrend" if daily_data['MA50'][-1] > daily_data['MA200'][-1] else "Downtrend"
                     st.write(f"{'⬆️' if daily_data['MA50'][-1] > daily_data['MA200'][-1] else '⬇️'} **Trend Status:** {trend}")
                     
@@ -279,7 +279,7 @@ if selected == "Home":
                     st.write(f"{'✅' if volume_change > 0 else 'ℹ️'} **Volume Change (5 Days):** {volume_change:.2f}%")
 
                 # Raw Data
-                with st.expander("Raw Data"):
+                with st.expander("Raw Data",expanded=True):
                     show_dataframe(daily_data)
                     
             else:
