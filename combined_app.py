@@ -735,6 +735,8 @@ if selected == "Portfolio Analysis and News":
         st.session_state.portfolio = []
     
     if not st.session_state.logged_in:
+        st.header("Login / Register")
+        auth_choice = st.radio("Choose an option", ["Login", "Register"])
         st.text_input("Username")
         password = st.text_input("Password", type="password")
 
