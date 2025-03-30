@@ -26,6 +26,16 @@ icon = Image.open("logo.png")
 st.set_page_config(page_title="EquityLens",page_icon=icon ,layout="wide")
 st.title("EquityLens")
 
+st.markdown(
+    """
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@900&display=swap" rel="stylesheet">
+    <h1 style="font-family: 'Roboto', sans-serif; font-weight: 900; color: #FFFFFF;">
+        EquityLens
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
+
 # Load stock list from CSV
 @st.cache_data
 def load_stock_list():
