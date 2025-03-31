@@ -790,6 +790,11 @@ if selected == "Portfolio Analysis and News":
             icons=["briefcase","newspaper"],
             default_index=0,
             orientation="horizontal",
+            styles={
+                "container": {"font-size": "18px", "width": "70%"},
+                "nav-link": {"font-size": "18px", "padding": "4px 8px", "margin": "0 4px", "font-weight": "bold"},
+                "icon": {"font-size": "18px"},
+            }
         )
     
         TIMEFRAME_OPTIONS = {
