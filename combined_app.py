@@ -595,7 +595,9 @@ if selected == "Portfolio Analysis and News":
     genai.configure(api_key=GEMINI_API_KEY)
     
     # Configure Supabase (credentials in secrets.toml)
-    supabase: Client = create_client(st.secrets["supabase_url"], st.secrets["supabase_key"])
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_API_KEY")
+    supabase: Client = create_client(supabase_url, supabase_key)
     
     # Database setup
     def init_db():
