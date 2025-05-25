@@ -591,12 +591,13 @@ if selected == "Portfolio Analysis and News":
     
 
     # Configure Gemini API
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII")  # Set in secrets.toml
+    GEMINI_API_KEY = "AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII"  # Set in secrets.toml
     genai.configure(api_key=GEMINI_API_KEY)
     
     # Configure Supabase (credentials in secrets.toml)
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_API_KEY")
+    supabase_url = "https://xefwjtmmuyumtonlxnhv.supabase.co"
+    supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZndqdG1tdXl1bXRvbmx4bmh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxMzc5NjgsImV4cCI6MjA1ODcxMzk2OH0.Vey-e7ShqyqT6FGI-eeED07mgNqnvUL7fO2ZF4wuhYw"
+
     supabase: Client = create_client(supabase_url, supabase_key)
     
     # Database setup
