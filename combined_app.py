@@ -591,7 +591,7 @@ if selected == "Portfolio Analysis and News":
     
 
     # Configure Gemini API
-    GEMINI_API_KEY = "AIzaSyAuRaOHe9jmLd74ILvwh59MoC2-mYjdkII"  # Set in secrets.toml
+    GEMINI_API_KEY = "AIzaSyA0SlSeSQMc3Bcyb1XWwvaoYPnvrndB6gE"  # Set in secrets.toml
     genai.configure(api_key=GEMINI_API_KEY)
     
     # Configure Supabase (credentials in secrets.toml)
@@ -650,7 +650,7 @@ if selected == "Portfolio Analysis and News":
     
     # Gemini AI portfolio analysis function
     def get_gemini_portfolio_analysis(portfolio_df):
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         portfolio_summary = portfolio_df.to_string()
         prompt = f"""
         You are a financial expert AI. Analyze the following stock portfolio and provide:
