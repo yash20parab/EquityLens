@@ -1029,62 +1029,149 @@ if selected == "Portfolio Analysis and News":
     
         # News Section
         elif selected == "News":
-            if not st.session_state.portfolio:
-                st.markdown("<div>Add stocks in the sidebar to see news!</div>", unsafe_allow_html=True)
-            else:
-                st.header("Stock News")
-                st.markdown("---")
-                for stock in st.session_state.portfolio:
-                    with st.expander(f"{stock['Ticker']} News", expanded=False):
-                        try:
-                            url = f"https://www.moneycontrol.com/news/tags/{stock['Ticker'].replace('.NS', '')}.html"
-                            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                            soup = BeautifulSoup(response.text, "html.parser")
-                            news_items = soup.find_all("li", class_="clearfix")[:3]
-                            
-                            if news_items:
-                                st.markdown("""
-                                <style>
-                                .news-item {
-                                    background-color: #1e1e1e;
-                                    border: 1px solid #333;
-                                    border-radius: 8px;
-                                    padding: 15px;
-                                    margin-bottom: 10px;
-                                    transition: background-color 0.3s ease;
-                                }
-                                .news-item:hover {
-                                    background-color: #2a2a2a;
-                                }
-                                .news-link {                                   
-                                    color: #c7d3c7 !important;
-                                    text-decoration: none !important;
-                                    font-weight: bold;
-                                    font-size: 24px;
-                                }
-                                .news-link:hover {
-                                    color: #45a049;
-                                    text-decoration: underline;
-                                }
-                                </style>
-                                """, unsafe_allow_html=True)
-                                
-                                for item in news_items:
-                                    title_elem = item.find("h2")
-                                    title = title_elem.text.strip()
-                                    link_elem = title_elem.find("a")
-                                    link = link_elem['href'] if link_elem and 'href' in link_elem.attrs else url
-                                    st.markdown(f"""
-                                    <div class="news-item">
-                                        <a href="{link}" class="news-link" target="_blank">{title}</a>
-                                        <br>
-                                        <small style="color: #888;">Read on Moneycontrol</small>
+            st.markdown("""
+            <style>
+            .news-header {
+                text-align: center;
+                margin-bottom: 25px;
+            }
+        
+            .news-header h1 {
+                font-size: 34px;
+                font-weight: 700;
+                background: linear-gradient(90deg, #00c853, #64ffda);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 6px;
+            }
+        
+            .news-subtitle {
+                color: #9e9e9e;
+                font-size: 15px;
+            }
+        
+            .news-card {
+                background: rgba(30, 30, 30, 0.85);
+                backdrop-filter: blur(10px);
+                border-radius: 16px;
+                padding: 18px 20px;
+                margin-bottom: 16px;
+                border: 1px solid rgba(255,255,255,0.08);
+                box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+                transition: all 0.25s ease-in-out;
+            }
+        
+            .news-card:hover {
+                transform: translateY(-4px) scale(1.01);
+                box-shadow: 0 18px 40px rgba(0,0,0,0.55);
+                border-left: 4px solid #00c853;
+            }
+        
+            .news-title {
+                font-size: 17px;
+                font-weight: 600;
+                color: #ffffff;
+                margin-bottom: 6px;
+            }
+        
+            .news-title a {
+                text-decoration: none;
+                color: #ffffff;
+            }
+        
+            .news-title a:hover {
+                color: #64ffda;
+            }
+        
+            .news-meta {
+                font-size: 13px;
+                color: #b0b0b0;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+        
+            .news-chip {
+                background-color: rgba(0, 200, 83, 0.15);
+                color: #00c853;
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 500;
+            }
+        
+            .news-empty {
+                text-align: center;
+                padding: 40px;
+                color: #9e9e9e;
+                font-size: 15px;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+        
+            # Header
+            st.markdown("""
+            <div class="news-header">
+                <h1>Market News</h1>
+                <div class="news-subtitle">
+                    Latest Indian stock market headlines powered by Google News
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+            # Stock selector
+            query = st.selectbox(
+                "🔍 Select Stock",
+                [""] + stock_symbols,
+                help="Choose a stock to view related market news"
+            )
+        
+            def fetch_google_news_rss(query):
+                url = f"https://news.google.com/rss/search?q={query}+stock+news&hl=en-IN&gl=IN&ceid=IN:en"
+                response = requests.get(url)
+                if response.status_code != 200:
+                    return []
+        
+                root = ET.fromstring(response.content)
+                news_list = []
+        
+                for item in root.findall(".//item")[:6]:
+                    title = item.find("title").text
+                    link = item.find("link").text
+                    source = item.find("source").text if item.find(
+                        "source") is not None else "Google News"
+                    news_list.append((title, link, source))
+        
+                return news_list
+        
+            if st.button("📰 Fetch Latest News"):
+                if not query:
+                    st.warning("Please select a stock first.")
+                else:
+                    with st.spinner("Fetching market headlines..."):
+                        news = fetch_google_news_rss(query)
+        
+                        if news:
+                            for title, link, source in news:
+                                st.markdown(f"""
+                                <div class="news-card">
+                                    <div class="news-title">
+                                        <a href="{link}" target="_blank">🟢 {title}</a>
                                     </div>
-                                    """, unsafe_allow_html=True)
-                            else:
-                                st.markdown(f"<div style='background-color: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 15px; color: #888;'>No recent news available for {stock['Ticker']}.</div>", unsafe_allow_html=True)
-                        except Exception as e:
-                            st.markdown(f"<div style='background-color: #2a2a2a; border: 1px solid #444; border-radius: 8px; padding: 15px; color: #F44336;'>Error fetching news for {stock['Ticker']}: {str(e)}</div>", unsafe_allow_html=True)
+                                    <div class="news-meta">
+                                        <span class="news-chip">{query}</span>
+                                        <span>🗞 {source}</span>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        else:
+                            st.markdown("""
+                            <div class="news-empty">
+                                😕 No recent news found for this stock.<br>
+                                Try another company.
+                            </div>
+                            """, unsafe_allow_html=True)
+
     
         # Footer
         st.markdown(f"<footer>App running on {pd.Timestamp.now().strftime('%B %d, %Y')}</footer>", unsafe_allow_html=True)
