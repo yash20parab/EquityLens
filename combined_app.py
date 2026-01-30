@@ -19,6 +19,7 @@ import google.generativeai as genai
 from supabase import create_client, Client
 import os
 from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 
 icon = Image.open("logo.png")
 
